@@ -8,7 +8,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,8 +16,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(router)
+
+
+@app.get("/", tags=["root"])
+async def root():
+    return {"message": "Hello World"}
 
 if __name__ == "__main__":
     import uvicorn
