@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres
+    container_name: waytrek-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  app:
+    build: .
+    depends_on:
+      - db
+    container_name: waytrek-api
+    environment:
+      DB_HOSTNAME: waytrek-db
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    command: python main.py
+
+volumes:
+  db_data:
