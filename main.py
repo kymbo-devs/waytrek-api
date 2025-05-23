@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import router
+from db.session import Base, engine
 
 app = FastAPI(
     title="WayTrek API",
@@ -18,6 +19,8 @@ app.add_middleware(
 
 app.include_router(router)
 
+Base.metadata.create_all(bind=engine)
+
 
 @app.get("/", tags=["root"])
 async def root():
@@ -25,4 +28,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)
