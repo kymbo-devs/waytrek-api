@@ -7,17 +7,21 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/waytrek")
+    DB_USER: str = os.getenv("DB_USER")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD")
+    DB_NAME: str = os.getenv("DB_NAME")
+    DB_PORT: str = os.getenv("DB_PORT")
+    DB_HOSTNAME: str = os.getenv("DB_HOSTNAME")
     # JWT
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     # API
-    API_V1_STR: str = "/api/v1"
+    API_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "WayTrek API"
 
 @lru_cache()
 def get_settings():
     return Settings()
 
-settings = get_settings() 
+settings = get_settings()
