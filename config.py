@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     DB_NAME: str = os.getenv("DB_NAME", "")
     DB_PORT: str = os.getenv("DB_PORT", "")
     DB_HOSTNAME: str = os.getenv("DB_HOSTNAME", "")
-    USER_POOL_ID: str = os.getenv("USER_POOL_ID", "")
-    CLIENT_ID: str = os.getenv("CLIENT_ID", "")
-    CLIENT_SECRET: str = os.getenv("CLIENT_SECRET", "")
+    COGNITO_USER_POOL_ID: str = os.getenv("COGNITO_USER_POOL_ID", "")
+    COGNITO_CLIENT_ID: str = os.getenv("COGNITO_CLIENT_ID", "")
+    COGNITO_CLIENT_SECRET: str = os.getenv("COGNITO_CLIENT_SECRET", "")
     # JWT
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key")
     ALGORITHM: str = "HS256"

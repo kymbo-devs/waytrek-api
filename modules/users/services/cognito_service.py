@@ -13,12 +13,12 @@ def login(user: UserLoginCredentials, client: CognitoIdentityProviderClient):
             'PASSWORD': user.password,
             'SECRET_HASH': get_secret_hash(user.email)
         },
-        ClientId=settings.CLIENT_ID
+        ClientId=settings.COGNITO_CLIENT_ID
     )
 
 def sign_up(user: UserCreate, client: CognitoIdentityProviderClient):
     args: SignUpRequestTypeDef = {
-        "ClientId": settings.CLIENT_ID,
+        "ClientId": settings.COGNITO_CLIENT_ID,
         "Username": user.email,
         "Password": user.password,
         "UserAttributes": [{"Name": "email", "Value": user.email}],
