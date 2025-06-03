@@ -3,12 +3,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import router
 from db.session import Base, engine
 from botocore.exceptions import ClientError
+from utils.auth_middleware import AuthMiddleware
+from config import settings
+from error_handlers import setup_error_handlers
+import logging
+
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="WayTrek API",
-    description="API para la aplicación WayTrek",
-    version="1.0.0"
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_PREFIX}/openapi.json",
+    docs_url="/docs"
 )
+
+setup_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,6 +28,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(AuthMiddleware)
 
 app.include_router(router)
 
@@ -29,8 +42,9 @@ async def client_error_handler(req, exc):
 
 @app.get("/", tags=["root"])
 async def root():
-    return {"message": "Hello World"}
+    return {"message": f"Welcome to {settings.PROJECT_NAME}"}
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info(f"Starting Uvicorn server for {settings.PROJECT_NAME} on http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
