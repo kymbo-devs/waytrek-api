@@ -14,8 +14,8 @@ async def get_users(db=Depends(get_db)):
 
 
 @router.post("/sign_up")
-async def create_user(user: UserCreate, client=Depends(get_cognito_client)):
-    return sign_up_ctrl(user, client)
+async def create_user(user: UserCreate, client=Depends(get_cognito_client), db=Depends(get_db)):
+    return sign_up_ctrl(user, client=client, db=db)
 
 
 @router.post("/login")

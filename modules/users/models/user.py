@@ -10,10 +10,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
-    password = Column(String, nullable=False)
     cognito_id = Column(String, nullable=False, unique=True)
-    is_active = Column(Boolean, default=False)
-    user_type_id = Column(Integer, ForeignKey("users_types.id", ondelete="cascade"), nullable=False)
+    is_active = Column(Boolean, default=True)
+    user_type_id = Column(Integer, ForeignKey("users_types.id", ondelete="cascade"))
     user_type: Mapped['UserType'] = relationship(back_populates="users")
 
 class UserType(Base):
@@ -22,7 +21,7 @@ class UserType(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
-    users: Mapped[List["User"]] = relationship(back_populates="user_type_id")
+    users: Mapped[List["User"]] = relationship(back_populates="user_type")
 
 
 

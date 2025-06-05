@@ -12,9 +12,9 @@ from typing import Callable, Awaitable, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-COGNITO_REGION = settings.USER_POOL_ID.split('_')[0]
-COGNITO_USER_POOL_ID = settings.USER_POOL_ID
-COGNITO_APP_CLIENT_ID = settings.CLIENT_ID
+COGNITO_REGION = settings.COGNITO_USER_POOL_ID.split('_')[0]
+COGNITO_USER_POOL_ID = settings.COGNITO_USER_POOL_ID
+COGNITO_APP_CLIENT_ID = settings.COGNITO_CLIENT_ID
 
 JWKS_URL = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}/.well-known/jwks.json"
 
@@ -102,12 +102,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.public_paths = {
             "/docs", 
-            "/openapi.json",
+            f"{settings.API_PREFIX}/openapi.json",
             f"{settings.API_PREFIX}/users/login",
             f"{settings.API_PREFIX}/users/sign_up",
         }
 
     def is_public_path(self, path: str) -> bool:
+        print(path)
         return path in self.public_paths
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
