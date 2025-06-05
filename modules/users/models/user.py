@@ -14,6 +14,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     user_type_id = Column(Integer, ForeignKey("users_types.id", ondelete="cascade"))
     user_type: Mapped['UserType'] = relationship(back_populates="users")
+    trips = relationship("Trip", back_populates="user")
 
 class UserType(Base):
     __tablename__ = "users_types"
