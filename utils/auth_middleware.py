@@ -108,7 +108,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         }
 
     def is_public_path(self, path: str) -> bool:
-        print(path)
         return path in self.public_paths
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:

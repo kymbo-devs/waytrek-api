@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 from sqlalchemy import Boolean, Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
+from modules.users.models.user import User
 
 
 class Trip(Base):
@@ -12,7 +13,7 @@ class Trip(Base):
     location_id = Column(Integer, ForeignKey("locations.id", ondelete="cascade"))
 
     location: Mapped['Location'] = relationship(back_populates="trips")
-    user = relationship("User", back_populates="trips")
+    user: Mapped['User'] = relationship(back_populates="trips")
     
 
 class Location(Base):
@@ -38,3 +39,5 @@ class Activity(Base):
     is_active = Column(Boolean, default=True)
 
     location: Mapped['Location'] = relationship(back_populates="trips")
+
+User.trips = relationship('Trip', back_populates="user")
