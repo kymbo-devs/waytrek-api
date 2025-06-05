@@ -54,6 +54,8 @@ class ActivityVideos(Base):
     title = Column(String, nullable=False)
     description = Column(String, nullable=False)
 
+    activity: Mapped['Activity'] = relationship(back_populates="videos")
+
 
 class TripDocuments(Base):
     __tablename__ = "trip_documents"
