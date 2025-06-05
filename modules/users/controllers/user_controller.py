@@ -1,22 +1,19 @@
-
+from mypy_boto3_cognito_idp import CognitoIdentityProviderClient
+from mypy_boto3_cognito_idp.type_defs import SignUpRequestTypeDef
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from modules.users.models.user import User
-from modules.users.schemas.user_schema import UserCreate
-from passlib.context import CryptContext
+from modules.users.schemas.user_schema import UserLoginCredentials, UserCreate
+import modules.users.services.cognito_service as cognito_service
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def login(user: UserLoginCredentials, client: CognitoIdentityProviderClient):
+    return cognito_service.login(user, client)
 
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-def create_user(user: UserCreate, db: Session):
-    hashed_password = hash_password(user.password)
-    user = User(email=user.email, password=hashed_password)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+def sign_up(user: UserCreate, client: CognitoIdentityProviderClient):
+    cognito_service.sign_up(user, client)
+    return {
+        "message": "Successful Sign up. Please verify your email."
+    }
 
 def get_users(db: Session):
     return db.execute(select(User)).scalars().all()
