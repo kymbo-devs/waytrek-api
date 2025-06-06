@@ -1,6 +1,6 @@
 from mypy_boto3_cognito_idp import CognitoIdentityProviderClient
 from config import settings
-from modules.users.schemas.user_schema import UserCreate, UserLoginCredentials
+from modules.users.schemas.user_schema import UserConfirmData, UserCreate, UserLoginCredentials
 from utils.security import get_secret_hash
 from mypy_boto3_cognito_idp.type_defs import SignUpRequestTypeDef
 
@@ -25,3 +25,11 @@ def sign_up(user: UserCreate, client: CognitoIdentityProviderClient):
         "SecretHash": get_secret_hash(user.email)
     }
     return client.sign_up(**args)
+
+def confirm_user(data: UserConfirmData, client: CognitoIdentityProviderClient):
+    return client.confirm_sign_up(
+        ClientId=settings.COGNITO_CLIENT_ID,
+        Username=data.email,
+        ConfirmationCode=data.code,
+        SecretHash=get_secret_hash(data.email)
+    )
