@@ -106,6 +106,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             f"{settings.API_PREFIX}/users/login",
             f"{settings.API_PREFIX}/users/sign_up",
             f"{settings.API_PREFIX}/users/confirm",
+            "/",
         }
 
     def is_public_path(self, path: str) -> bool:
