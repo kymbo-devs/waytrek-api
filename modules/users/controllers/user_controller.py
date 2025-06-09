@@ -4,7 +4,7 @@ from mypy_boto3_cognito_idp.type_defs import SignUpRequestTypeDef
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from modules.users.models.user import User
-from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserLoginCredentials, UserCreate
+from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserLoginCredentials, UserCreate, UserSignUpResponse
 from modules.users.services import user_service
 from modules.users.services import cognito_service
 
@@ -19,11 +19,9 @@ def login(user: UserLoginCredentials, client: CognitoIdentityProviderClient) -> 
     }
 
 
-def sign_up(user: UserCreate, db: Session, client: CognitoIdentityProviderClient):
+def sign_up(user: UserCreate, db: Session, client: CognitoIdentityProviderClient) -> UserSignUpResponse:
     user_service.create_user(user, client=client, db=db)
-    return {
-        "message": "Successful Sign up. Please verify your email."
-    }
+    return UserSignUpResponse(message="Successful Sign up. Please verify your email.")
 
 
 def get_users(db: Session):
