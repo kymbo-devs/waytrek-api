@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # API
     API_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "WayTrek API"
+    PUBLIC_PATHS: list[str] = ["/users/login", "/users/sign_up", "/users/confirm", "/docs", "/openapi.json"]
 
 @lru_cache()
 def get_settings():

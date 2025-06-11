@@ -10,25 +10,9 @@ logger = logging.getLogger(__name__)
 
 def setup_error_handlers(app: FastAPI):
     
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
-        logger.warning(f"HTTP {exc.status_code}: {exc.detail} - Path: {request.url.path}")
-        
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
-                "error": {
-                    "code": exc.status_code,
-                    "message": exc.detail,
-                    "type": "http_error"
-                }
-            },
-            headers=exc.headers
-        )
-
     @app.exception_handler(StarletteHTTPException)
-    async def starlette_exception_handler(request: Request, exc: StarletteHTTPException):
-        logger.warning(f"Starlette HTTP {exc.status_code}: {exc.detail} - Path: {request.url.path}")
+    async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+        logger.warning(f"HTTP {exc.status_code}: {exc.detail} - Path: {request.url.path}")
         
         return JSONResponse(
             status_code=exc.status_code,
@@ -38,7 +22,8 @@ def setup_error_handlers(app: FastAPI):
                     "message": exc.detail,
                     "type": "authentication_error" if exc.status_code == 401 else "http_error"
                 }
-            }
+            },
+            headers=getattr(exc, "headers", None)
         )
 
     @app.exception_handler(RequestValidationError)
