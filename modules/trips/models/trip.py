@@ -14,6 +14,8 @@ class Trip(Base):
 
     location: Mapped['Location'] = relationship(back_populates="trips")
     user: Mapped['User'] = relationship(back_populates="trips")
+    documents: Mapped[List['TripDocuments']] = relationship(back_populates="trip")
+    trip_schedule: Mapped[List['TripSchedule']] = relationship(back_populates="trip")
     
 
 class Location(Base):
@@ -36,13 +38,14 @@ class Activity(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     location_id = Column(Integer, ForeignKey("locations.id", ondelete="cascade"))
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=False)
     history = Column(String, nullable=False)
     tip = Column(String, nullable=False)
     movie = Column(String, nullable=False)
     clothes = Column(String, nullable=False)
 
-    location: Mapped['Location'] = relationship(back_populates="trips")
+    location: Mapped['Location'] = relationship(back_populates="activities")
+    videos: Mapped[List['ActivityVideos']] = relationship(back_populates="activity")
 
 class ActivityVideos(Base):
     __tablename__ = "activity_videos"
@@ -76,6 +79,7 @@ class TripSchedule(Base):
     date = Column(DateTime, nullable=False)
 
     trip: Mapped['Trip'] = relationship(back_populates="trip_schedule")
+    schedule: Mapped[List['Schedule']] = relationship(back_populates="trip_schedule")
 
 class Schedule(Base):
     __tablename__ = "schedule"
