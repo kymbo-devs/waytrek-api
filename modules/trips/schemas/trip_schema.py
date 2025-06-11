@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Optional
 
 
 class TripBase(BaseModel):
@@ -36,3 +37,9 @@ class Activity(ActivityCreate):
 
     class Config:
         from_attributes = True
+
+class ActivityFilter(BaseModel):
+    skip: int = 0
+    limit: int = 100
+    location_id: Optional[int] = None
+    is_active: Optional[bool] = None

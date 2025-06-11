@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
-from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate
+from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter
 from modules.trips.controllers.trip_controller import (
     create_trip as create_trip_controller, 
     get_trip as get_trip_controller,
@@ -33,15 +33,10 @@ async def create_activity_route(activity: ActivityCreate, db: Session = Depends(
     description="Retrieves a list of activities with optional filtering by location and active status, and supports pagination.",
 )
 async def get_activities_route(
-    location_id: int | None = None,
-    is_active: bool | None = None,
-    skip: int = 0,
-    limit: int = 100,
+    filters: ActivityFilter = Depends(),
     db: Session = Depends(get_db),
 ):
-    return get_activities_controller(
-        db=db, skip=skip, limit=limit, location_id=location_id, is_active=is_active
-    )
+    return get_activities_controller(filters=filters, db=db)
 
 @router.get(
     "/activities/{activity_id}",

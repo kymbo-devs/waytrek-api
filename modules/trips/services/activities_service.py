@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate
+from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate, ActivityFilter
 from modules.trips.models.trip import Activity, Location
 
 
@@ -38,16 +38,16 @@ def get_activity(activity_id: int, db: Session):
         )
     return activity
 
-def get_activities(db: Session, skip: int = 0, limit: int = 10, location_id: int | None = None, is_active: bool | None = None):
+def get_activities(db: Session, filters: ActivityFilter):
     query = db.query(Activity)
     
-    if location_id is not None:
-        query = query.filter(Activity.location_id == location_id)
+    if filters.location_id is not None:
+        query = query.filter(Activity.location_id == filters.location_id)
         
-    if is_active is not None:
-        query = query.filter(Activity.is_active == is_active)
+    if filters.is_active is not None:
+        query = query.filter(Activity.is_active == filters.is_active)
         
-    activities = query.offset(skip).limit(limit).all()
+    activities = query.offset(filters.skip).limit(filters.limit).all()
     return activities
 
 def update_activity(activity_id: int, activity_data: ActivityUpdate, db: Session):

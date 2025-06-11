@@ -20,15 +20,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.alter_column('activities', 'is_active',
-               existing_type=sa.BOOLEAN(),
-               nullable=False,
-               server_default=sa.text('false'))
+    # Set default for future inserts and update existing rows
+    op.execute("ALTER TABLE activities ALTER COLUMN is_active SET DEFAULT false;")
+    op.execute("UPDATE activities SET is_active = false WHERE is_active IS NULL;")
+    
+    # Enforce the column to be not null
+    op.execute("ALTER TABLE activities ALTER COLUMN is_active SET NOT NULL;")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.alter_column('activities', 'is_active',
-               existing_type=sa.BOOLEAN(),
-               nullable=True,
-               server_default=sa.text('true'))
+    # Revert to nullable and remove the default
+    op.execute("ALTER TABLE activities ALTER COLUMN is_active DROP NOT NULL;")
+    op.execute("ALTER TABLE activities ALTER COLUMN is_active DROP DEFAULT;")
