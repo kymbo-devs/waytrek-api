@@ -1,4 +1,5 @@
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
+from starlette.exceptions import HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -116,25 +117,24 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if self.is_public_path(request.url.path):
             return await call_next(request)
 
-        auth_header = request.headers.get("Authorization")
-        if not auth_header:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authorization header missing",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        parts = auth_header.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authorization header format",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        token = parts[1]
-
         try:
+            auth_header = request.headers.get("Authorization")
+            if not auth_header:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authorization header missing",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            parts = auth_header.split()
+            if len(parts) != 2 or parts[0].lower() != "bearer":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authorization header format",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            token = parts[1]
             public_key = get_public_key(token)
             payload = jwt.decode(
                 token,
@@ -150,23 +150,19 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.username = payload.get("username")
             request.state.user_payload = payload
 
+            response = await call_next(request)
+            return response
+
         except JWTError as e:
             logger.warning(f"Error al decodificar JWT: {e}")
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
+                content={"error": {"code": 401, "message": "Invalid or expired token", "type": "authentication_error"}},
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Error inesperado durante validación de token: {e}")
-            print(f"Error inesperado durante validación de token: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Error validating token",
-                headers={"WWW-Authenticate": "Bearer"},
+        except HTTPException as exc:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"error": {"code": exc.status_code, "message": exc.detail, "type": "authentication_error"}},
+                headers=exc.headers,
             )
-
-        response = await call_next(request)
-        return response
