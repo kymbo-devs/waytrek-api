@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, UploadFile
 from sqlalchemy.orm import Session
 from db.session import get_db
 from modules.trips.schemas.trip_schema import TripCreate, ActivityCreate, ActivityUpdate, ActivityFilter
@@ -30,3 +30,7 @@ def update_activity_controller(activity_id: int, activity_data: ActivityUpdate, 
 def delete_activity_controller(activity_id: int, db: Session):
     return activities_service.delete_activity(activity_id=activity_id, db=db)
      
+def create_video_controller(activity_id: int, video: UploadFile, title: str, description: str, db: Session):
+    return activities_service.create_video(activity_id=activity_id, video=video, title=title, description=description, db=db)
+
+

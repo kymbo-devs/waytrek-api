@@ -12,3 +12,4 @@ python-multipart==0.0.20
 psycopg2-binary==2.9.9
 pydantic-settings==2.9.1
 mypy_boto3_cognito_idp==1.38.16
+uuid==1.30

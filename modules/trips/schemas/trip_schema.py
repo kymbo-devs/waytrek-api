@@ -43,3 +43,14 @@ class ActivityFilter(BaseModel):
     limit: int = 100
     location_id: Optional[int] = None
     is_active: Optional[bool] = None
+
+
+class VideoCreate(BaseModel):
+    title: str = Field(..., description="The title of the video")
+    description: str = Field(..., description="The description of the video")
+
+class Video(VideoCreate):
+    id: int
+
+    class Config:
+        from_attributes = True

@@ -1,12 +1,14 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, UploadFile
 from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate, ActivityFilter
-from modules.trips.models.trip import Activity, Location
+from modules.trips.models.trip import Activity, Location, ActivityVideos
+from utils.s3_client import upload_file_to_s3
+import uuid
+import os
 
-
+ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo"]
 
 def create_activity(activity: ActivityCreate, db: Session):
-    
     location = db.query(Location).filter(Location.id == activity.location_id).first()
     if not location:
         raise HTTPException(
@@ -70,3 +72,48 @@ def delete_activity(activity_id: int, db: Session):
     db.commit()
     
     return {"detail": "Activity deleted successfully"}
+
+def create_video(activity_id: int, video: UploadFile, title: str, description: str, db: Session):
+    activity = get_activity(activity_id, db)
+    
+    if video.content_type not in ALLOWED_VIDEO_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid video type. Allowed types are: {', '.join(ALLOWED_VIDEO_TYPES)}"
+        )
+    
+    file_extension = os.path.splitext(video.filename)[1]
+    file_key = f"activities/{activity_id}/{uuid.uuid4()}{file_extension}"
+    
+    try:
+        video_url = upload_file_to_s3(
+            file_data=video.file,
+            file_name=file_key,
+            content_type=video.content_type
+        )
+        
+        new_video = ActivityVideos(
+            activity_id=activity_id,
+            url=video_url,
+            file_key=file_key,
+            title=title,
+            description=description
+        )
+        
+        db.add(new_video)
+        db.commit()
+        db.refresh(new_video)
+        
+        return new_video
+        
+    except Exception as e:
+        try:
+            from utils.s3_client import delete_file_from_s3
+            delete_file_from_s3(file_key)
+        except:
+            pass
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error uploading video: {str(e)}"
+        )
