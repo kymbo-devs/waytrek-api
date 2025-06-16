@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from fastapi import UploadFile, File, Form
 
-from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter
+from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, Video
 from modules.trips.controllers.trip_controller import (
     create_trip as create_trip_controller, 
     get_trip as get_trip_controller,
@@ -10,7 +11,8 @@ from modules.trips.controllers.trip_controller import (
     get_activities_controller,
     get_activity_controller,
     update_activity_controller,
-    delete_activity_controller
+    delete_activity_controller,
+    create_video_controller
 )
 from db.session import get_db
 
@@ -67,3 +69,45 @@ async def update_activity_route(
 async def delete_activity_route(activity_id: int, db: Session = Depends(get_db)):
     delete_activity_controller(activity_id, db)
     return
+
+@router.post(
+    "/activities/{activity_id}/videos",
+    status_code=201,
+    summary="Upload a video for an activity",
+    description="""
+    Uploads a video file for a specific activity.
+    
+    - The video must be in MP4, QuickTime, or AVI format
+    - The file will be stored in S3 and made publicly accessible
+    - A record will be created in the database with the video metadata
+    
+    Required fields:
+    - video: The video file (multipart/form-data)
+    - title: Title of the video
+    - description: Description of the video
+    """,
+)
+async def create_video_route(
+    activity_id: int,
+    video: UploadFile = File(..., description="The video file to upload"),
+    title: str = Form(..., description="Title of the video"),
+    description: str = Form(..., description="Description of the video"),
+    db: Session = Depends(get_db)
+):
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Video file is required"
+        )
+    if not title:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Title is required"
+        )
+    if not description:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Description is required"
+        )
+        
+    return create_video_controller(activity_id, video, title, description, db)
