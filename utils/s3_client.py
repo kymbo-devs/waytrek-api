@@ -89,7 +89,7 @@ def delete_file_from_s3(file_name):
         logger.error(f"Error deleting file from S3: {str(e)}")
         raise 
 
-def generate_presigned_url(file_key: str, expires_in: int = 600):
+def generate_presigned_url(file_key: str, expires_in: int = 3600):
     try:
         logger.info(f"Generando pre-signed URL para {file_key}...")
         s3_client = get_s3_client()

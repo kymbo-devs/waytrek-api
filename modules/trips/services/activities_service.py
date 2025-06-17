@@ -119,7 +119,7 @@ def create_video(activity_id: int, video: UploadFile, title: str, description: s
         )
     
 
-def get_video_signed_url(activity_id: int, video_id: int, db: Session, expires_in: int = 600):
+def get_video_signed_url(activity_id: int, video_id: int, db: Session, expires_in: int = 3600):
 
     video = db.query(ActivityVideos).filter(
         ActivityVideos.id == video_id,
