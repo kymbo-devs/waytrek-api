@@ -54,3 +54,8 @@ class Video(VideoCreate):
 
     class Config:
         from_attributes = True
+
+class VideoSignedUrlResponse(BaseModel):
+    video_id: int = Field(..., description="The ID of the video")
+    signed_url: str = Field(..., description="The pre-signed URL to access the video")
+    expires_in: int = Field(..., description="The expiration time in seconds")

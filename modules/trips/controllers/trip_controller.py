@@ -33,4 +33,5 @@ def delete_activity_controller(activity_id: int, db: Session):
 def create_video_controller(activity_id: int, video: UploadFile, title: str, description: str, db: Session):
     return activities_service.create_video(activity_id=activity_id, video=video, title=title, description=description, db=db)
 
-
+def get_video_signed_url_controller(activity_id: int, video_id: int, db: Session):
+    return activities_service.get_video_signed_url(activity_id=activity_id, video_id=video_id, db=db)
