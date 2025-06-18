@@ -1,4 +1,4 @@
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base

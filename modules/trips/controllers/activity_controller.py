@@ -1,18 +1,11 @@
 from typing import List
-from fastapi import HTTPException
-from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from modules.trips.schemas.activity_schema import ActivityVideosResponse
-from modules.trips.models.trip import Activity, ActivityVideos
+from modules.trips.schemas.activity_schema import ActivityVideosFilters, ActivityVideosResponse
+from modules.trips.models.trip import ActivityVideos
+from modules.trips.services import activities_service
 
 
 def get_activity_videos(activity_id: int, db: Session) -> List[ActivityVideosResponse]:
-    activity = db.execute(select(Activity).where(
-        Activity.id == activity_id)).scalar_one_or_none()
-    if (not activity):
-        raise HTTPException(404, "Activity not found")
-
     def format_activity_video(video: ActivityVideos) -> ActivityVideosResponse:
         return {
             "activity_id": video.activity_id,
@@ -21,5 +14,5 @@ def get_activity_videos(activity_id: int, db: Session) -> List[ActivityVideosRes
             "title": video.title,
             "video_id": video.id
         }  # type: ignore
-
-    return list(map(format_activity_video, activity.videos))
+    videos = activities_service.get_videos(db, ActivityVideosFilters(activity_id=activity_id))
+    return list(map(format_activity_video, videos))
