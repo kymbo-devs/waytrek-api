@@ -4,7 +4,7 @@ from fastapi import HTTPException, status, UploadFile
 from modules.trips.schemas.activity_schema import ActivityVideosFilters
 from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate, ActivityFilter
 from modules.trips.models.trip import Activity, Location, ActivityVideos
-from utils.s3_client import upload_file_to_s3
+from utils.s3_client import upload_file_to_s3, generate_presigned_url
 import uuid
 import os
 
@@ -125,4 +125,33 @@ def create_video(activity_id: int, video: UploadFile, title: str, description: s
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error uploading video: {str(e)}"
+        )
+    
+
+def get_video_signed_url(activity_id: int, video_id: int, db: Session, expires_in: int = 3600):
+
+    video = db.query(ActivityVideos).filter(
+        ActivityVideos.id == video_id,
+        ActivityVideos.activity_id == activity_id
+    ).first()
+    
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Video with id {video_id} not found for activity {activity_id}."
+        )
+    
+    try:
+        signed_url = generate_presigned_url(video.file_key, expires_in)
+        
+        return {
+            "video_id": video_id,
+            "signed_url": signed_url,
+            "expires_in": expires_in
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generating signed URL: {str(e)}"
         )

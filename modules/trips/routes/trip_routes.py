@@ -5,7 +5,7 @@ from fastapi import UploadFile, File, Form
 
 from modules.trips.controllers import activity_controller
 from modules.trips.schemas.activity_schema import ActivityVideosResponse
-from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, Video
+from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, VideoSignedUrlResponse
 from modules.trips.controllers.trip_controller import (
     create_trip as create_trip_controller, 
     get_trip as get_trip_controller,
@@ -14,7 +14,8 @@ from modules.trips.controllers.trip_controller import (
     get_activity_controller,
     update_activity_controller,
     delete_activity_controller,
-    create_video_controller
+    create_video_controller,
+    get_video_signed_url_controller
 )
 from db.session import get_db
 
@@ -119,3 +120,20 @@ async def create_video_route(
     description="Get videos from an activity")
 def get_activity_videos(activity_id: int, db=Depends(get_db)) -> List[ActivityVideosResponse]:
     return activity_controller.get_activity_videos(activity_id=activity_id, db=db)
+
+@router.get(
+    "/activities/{activity_id}/videos/{video_id}/url",
+    response_model=VideoSignedUrlResponse,
+    summary="Get a signed URL for a video",
+    description="""
+    Generates a temporary signed URL to access a video stored in S3.
+    
+    - Validates that the video belongs to the specified activity
+    - Returns a URL that expires after 10 minutes (600 seconds)
+    - Enables secure video playback directly in the browser
+    - The signed URL prevents unauthorized access to video content
+    """,
+)
+async def get_video_signed_url_route(activity_id: int, video_id: int, db: Session = Depends(get_db)):
+    return get_video_signed_url_controller(activity_id, video_id, db)
+
