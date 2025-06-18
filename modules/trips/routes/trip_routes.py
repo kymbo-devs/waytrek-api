@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 from fastapi import UploadFile, File, Form
 
-from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, Video, VideoSignedUrlResponse
+from modules.trips.controllers import activity_controller
+from modules.trips.schemas.activity_schema import ActivityVideosResponse
+from modules.trips.schemas.trip_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, VideoSignedUrlResponse
 from modules.trips.controllers.trip_controller import (
     create_trip as create_trip_controller, 
     get_trip as get_trip_controller,
@@ -113,6 +115,11 @@ async def create_video_route(
         
     return create_video_controller(activity_id, video, title, description, db)
 
+@router.get('/activities/{activity_id}/videos',
+    summary="Get videos associated to an activity",
+    description="Get videos from an activity")
+def get_activity_videos(activity_id: int, db=Depends(get_db)) -> List[ActivityVideosResponse]:
+    return activity_controller.get_activity_videos(activity_id=activity_id, db=db)
 
 @router.get(
     "/activities/{activity_id}/videos/{video_id}/url",

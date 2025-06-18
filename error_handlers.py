@@ -4,9 +4,20 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
 import traceback
-from typing import Union
+from typing_extensions import TypedDict
+from typing import Any, NotRequired, Sequence
 
 logger = logging.getLogger(__name__)
+
+class HttpErrorDetail(TypedDict):
+     code: int
+     message: str
+     type: str
+     details: NotRequired[Sequence[Any]]
+
+class HttpErrorResponse(TypedDict):
+    error: HttpErrorDetail
+
 
 def setup_error_handlers(app: FastAPI):
     
