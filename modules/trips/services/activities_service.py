@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status, UploadFile
-from modules.trips.schemas.activity_schema import ActivityVideosFilters
+from modules.trips.schemas.activity_schema import ActivityVideosFilters, ActivityVideosResponse
 from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate, ActivityFilter
 from modules.trips.models.trip import Activity, Location, ActivityVideos
 from utils.s3_client import upload_file_to_s3, generate_presigned_url
@@ -75,12 +75,21 @@ def delete_activity(activity_id: int, db: Session):
     
     return {"detail": "Activity deleted successfully"}
 
+def format_activity_video(video: ActivityVideos) -> ActivityVideosResponse:
+    return {
+        "activity_id": video.activity_id,
+        "description": video.description,
+        "file_key": video.file_key,
+        "title": video.title,
+        "video_id": video.id
+    }  # type: ignore
+    
 def get_videos(db: Session, filters: ActivityVideosFilters = ActivityVideosFilters()):
     statement = select(ActivityVideos)
     if (filters.activity_id != None):
         statement = statement.where(ActivityVideos.activity_id == filters.activity_id)
     videos = list(db.execute(statement).scalars().all())
-    return videos
+    return list(map(format_activity_video, videos))
 
 def create_video(activity_id: int, video: UploadFile, title: str, description: str, db: Session):
     activity = get_activity(activity_id, db)
