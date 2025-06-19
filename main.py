@@ -1,8 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import router
 from db.session import Base, engine
-from botocore.exceptions import ClientError
 from utils.auth_middleware import AuthMiddleware
 from config import settings
 from error_handlers import setup_error_handlers
@@ -71,11 +70,6 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
-
-@app.exception_handler(ClientError)
-async def client_error_handler(req, exc):
-    raise HTTPException(exc.response['ResponseMetadata']['HTTPStatusCode'], exc.response.get(  # type: ignore
-        'message'))
 
 @app.get("/", tags=["root"])
 async def root():
