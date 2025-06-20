@@ -1,8 +1,10 @@
 from typing import List, TYPE_CHECKING, Optional
-from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime
+from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, func
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
-from modules.users.models.user import User
+from modules.users.models.user import SavedList, User
+from sqlalchemy.orm import mapped_column
+
 
 
 class Trip(Base):
@@ -13,10 +15,11 @@ class Trip(Base):
     location_id = Column(Integer, ForeignKey("locations.id", ondelete="cascade"))
 
     location: Mapped['Location'] = relationship(back_populates="trips")
-    user: Mapped['User'] = relationship(back_populates="trips")
     documents: Mapped[List['TripDocuments']] = relationship(back_populates="trip")
     trip_schedule: Mapped[List['TripSchedule']] = relationship(back_populates="trip")
     
+User.trips = relationship(Trip, back_populates="user")
+Trip.user= relationship(User, back_populates="trips")
 
 class Location(Base):
     __tablename__ = "locations"
@@ -91,4 +94,4 @@ class Schedule(Base):
 
     trip_schedule: Mapped['TripSchedule'] = relationship(back_populates="schedule")
 
-User.trips = relationship('Trip', back_populates="user")
+SavedList.activity = relationship(Activity)

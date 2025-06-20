@@ -1,9 +1,11 @@
-from fastapi import APIRouter, status
+from typing import List
+from fastapi import APIRouter, Request, status
 from fastapi import Depends
 from db.session import get_db
+from modules.users.schemas.saved_list_schema import SavedListWithActivity
 from utils.security import get_cognito_client
 from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserCreate, UserLoginCredentials, UserSignUpResponse
-from modules.users.controllers import user_controller
+from modules.users.controllers import user_controller, saved_list_controller
 from error_handlers import HttpErrorResponse
 
 router = APIRouter()
@@ -63,3 +65,12 @@ Confirms a user's account using Amazon Cognito.
 )
 async def confirm(user: UserConfirmData, client=Depends(get_cognito_client)):
     return user_controller.confirm_user(user, client)
+
+@router.get(
+    "/saved_list",
+    summary="Get user saved list",
+    description="Get authenticated user saved activities",
+    response_model=List[SavedListWithActivity]
+)
+async def saved_list(request: Request, db=Depends(get_db)):
+    return saved_list_controller.get_saved_list(request.state.user_id, db)

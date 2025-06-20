@@ -1,8 +1,9 @@
 from fastapi import HTTPException
 from mypy_boto3_cognito_idp import CognitoIdentityProviderClient
-from modules.users.models.user import User
+from sqlalchemy import desc, select
+from modules.users.models.user import SavedList, User
 from modules.users.schemas.user_schema import UserCreate
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from modules.users.services import cognito_service
 
@@ -17,3 +18,12 @@ def create_user(user: UserCreate, client: CognitoIdentityProviderClient, db: Ses
     db.commit()
     db.refresh(new_user)
     return new_user
+
+def get_saved_list(user_id: int, db: Session):
+    result = db.execute(
+        select(SavedList)
+        .where(SavedList.user_id == user_id)
+        .order_by(desc(SavedList.created_at))
+        .options(joinedload(SavedList.activity))
+    )
+    return list(result.scalars().all())
