@@ -2,13 +2,29 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from botocore.exceptions import ClientError
 import logging
 import traceback
-from typing import Union
+from typing_extensions import TypedDict
+from typing import Any, NotRequired, Sequence
 
 logger = logging.getLogger(__name__)
 
+class HttpErrorDetail(TypedDict):
+     code: int
+     message: str
+     type: str
+     details: NotRequired[Sequence[Any]]
+
+class HttpErrorResponse(TypedDict):
+    error: HttpErrorDetail
+
+
 def setup_error_handlers(app: FastAPI):
+    @app.exception_handler(ClientError)
+    async def client_error_handler(req, exc):
+        raise HTTPException(exc.response['ResponseMetadata']['HTTPStatusCode'], exc.response.get(  # type: ignore
+        'message'))
     
     @app.exception_handler(StarletteHTTPException)
     async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):

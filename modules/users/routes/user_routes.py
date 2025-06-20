@@ -4,6 +4,7 @@ from db.session import get_db
 from utils.security import get_cognito_client
 from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserCreate, UserLoginCredentials, UserSignUpResponse
 from modules.users.controllers import user_controller
+from error_handlers import HttpErrorResponse
 
 router = APIRouter()
 
@@ -32,6 +33,10 @@ async def create_user(user: UserCreate, client=Depends(get_cognito_client), db=D
 
 @router.post("/login", 
 response_model=UserAuthResult,
+responses={
+    400: {"model": HttpErrorResponse, "description": "Invalid credentials" },
+    403: {"model": HttpErrorResponse, "description": "User not confirmed" }
+},
 summary="Login a user",
 description="""
 Logs in a user using Amazon Cognito.

@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from mypy_boto3_cognito_idp import CognitoIdentityProviderClient
-from mypy_boto3_cognito_idp.type_defs import SignUpRequestTypeDef
+from botocore.exceptions import ClientError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from modules.users.models.user import User
@@ -10,13 +10,18 @@ from modules.users.services import cognito_service
 
 
 def login(user: UserLoginCredentials, client: CognitoIdentityProviderClient) -> UserAuthResult:
-    auth_result = cognito_service.login(user, client)["AuthenticationResult"]
-    return {
-        "access_token": auth_result["AccessToken"], # type: ignore
-        "expires_in": auth_result["ExpiresIn"], # type: ignore
-        "refresh_token": auth_result["RefreshToken"], # type: ignore
-        "token_type": auth_result["TokenType"] # type: ignore
-    }
+    try:
+        auth_result = cognito_service.login(user, client)["AuthenticationResult"]
+        return {
+            "access_token": auth_result["AccessToken"], # type: ignore
+            "expires_in": auth_result["ExpiresIn"], # type: ignore
+            "refresh_token": auth_result["RefreshToken"], # type: ignore
+            "token_type": auth_result["TokenType"] # type: ignore
+        }
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "UserNotConfirmedException":
+            raise HTTPException(403, e.response.get('message'))
+        raise e
 
 
 def sign_up(user: UserCreate, db: Session, client: CognitoIdentityProviderClient) -> UserSignUpResponse:
