@@ -86,3 +86,17 @@ async def saved_list(request: Request, db=Depends(get_db)):
 )
 async def add_saved_list(save_activity: SaveActivityRequest,request: Request,db=Depends(get_db)):
     return saved_list_controller.save_activity_to_list(request.state.user_id, save_activity.activity_id, db)
+
+@router.delete(
+    "/saved_list/{save_id}",
+    summary="Remove activity from user list",
+    description="Remove an activity from current user saved list",
+    response_model=SavedList,
+    responses={
+        200: {"description": "Success response. Return deleted save"},
+        404: {"model": HttpErrorResponse, "description": "Save not found"},
+        401: {"model": HttpErrorResponse, "description": "User don't have permission to delete the save"},
+    }
+)
+async def remove_from_saved_list(save_id: int,request: Request,db=Depends(get_db)):
+    return saved_list_controller.remove_activity_from_list(request.state.user_id, save_id, db)
