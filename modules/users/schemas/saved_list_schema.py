@@ -12,9 +12,14 @@ class SavedListActivity(BaseModel):
     movie: str
     clothes: str
 
-class SavedListWithActivity(BaseModel):
+class SaveActivityRequest(BaseModel):
+    activity_id: int
+
+class SavedList(BaseModel):
     id: int
     user_id: int
     activity_id: int
     created_at: datetime
+
+class SavedListWithActivity(SavedList):
     activity: SavedListActivity

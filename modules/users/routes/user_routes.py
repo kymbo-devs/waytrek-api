@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Request, status
 from fastapi import Depends
 from db.session import get_db
-from modules.users.schemas.saved_list_schema import SavedListWithActivity
+from modules.users.schemas.saved_list_schema import SaveActivityRequest, SavedList, SavedListWithActivity
 from utils.security import get_cognito_client
 from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserCreate, UserLoginCredentials, UserSignUpResponse
 from modules.users.controllers import user_controller, saved_list_controller
@@ -74,3 +74,15 @@ async def confirm(user: UserConfirmData, client=Depends(get_cognito_client)):
 )
 async def saved_list(request: Request, db=Depends(get_db)):
     return saved_list_controller.get_saved_list(request.state.user_id, db)
+
+@router.post(
+    "/saved_list",
+    summary="Add activity to user list",
+    description="Add a new activity to current user saved list",
+    response_model=SavedList,
+    responses={
+        404: {"model": HttpErrorResponse, "description": "Activity or user not found"}
+    }
+)
+async def add_saved_list(save_activity: SaveActivityRequest,request: Request,db=Depends(get_db)):
+    return saved_list_controller.save_activity_to_list(request.state.user_id, save_activity.activity_id, db)

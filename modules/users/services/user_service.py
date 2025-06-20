@@ -6,6 +6,7 @@ from modules.users.schemas.user_schema import UserCreate
 from sqlalchemy.orm import Session, joinedload
 
 from modules.users.services import cognito_service
+from modules.trips.services import activities_service
 
 
 def create_user(user: UserCreate, client: CognitoIdentityProviderClient, db: Session):
@@ -27,3 +28,25 @@ def get_saved_list(user_id: int, db: Session):
         .options(joinedload(SavedList.activity))
     )
     return list(result.scalars().all())
+
+
+def add_activity_to_list(user_id: int, activity_id: int, db: Session):
+    existing_save = db.execute(
+        select(SavedList)
+        .where(SavedList.user_id == user_id)
+        .where(SavedList.activity_id == activity_id)
+    ).scalar_one_or_none()
+    if (existing_save): return existing_save
+    activity = activities_service.get_activity(activity_id, db)
+    saved_activity = SavedList(
+        user_id=user_id,
+        activity_id=activity.id
+    )
+    db.add(saved_activity)
+    db.commit()
+    db.refresh(saved_activity)
+    return saved_activity
+
+
+def get_user_by_cognito_id(cognito_id: str, db: Session) -> User | None:
+    return db.execute(select(User).where(User.cognito_id == cognito_id)).scalar_one_or_none()
