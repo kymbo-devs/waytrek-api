@@ -1,5 +1,5 @@
 from typing import List, TYPE_CHECKING
-from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime
+from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, ARRAY, Text
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
 from modules.users.models.user import User
@@ -43,6 +43,7 @@ class Activity(Base):
     tip = Column(String, nullable=False)
     movie = Column(String, nullable=False)
     clothes = Column(String, nullable=False)
+    tags = Column(ARRAY(Text), default=lambda: [], nullable=False)
 
     location: Mapped['Location'] = relationship(back_populates="activities")
     videos: Mapped[List['ActivityVideos']] = relationship(back_populates="activity")

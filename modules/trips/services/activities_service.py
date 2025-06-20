@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from fastapi import HTTPException, status, UploadFile
 from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate, ActivityFilter
 from modules.trips.models.trip import Activity, Location, ActivityVideos
@@ -24,7 +25,8 @@ def create_activity(activity: ActivityCreate, db: Session):
         history=activity.history,
         tip=activity.tip,
         movie=activity.movie,
-        clothes=activity.clothes
+        clothes=activity.clothes,
+        tags=activity.tags
         )
     db.add(new_activity)
     db.commit()
@@ -48,6 +50,11 @@ def get_activities(db: Session, filters: ActivityFilter):
         
     if filters.is_active is not None:
         query = query.filter(Activity.is_active == filters.is_active)
+    
+    if filters.tag is not None:
+        query = query.filter(
+            func.array_to_string(Activity.tags, ',').ilike(f"%{filters.tag}%")
+        )
         
     activities = query.offset(filters.skip).limit(filters.limit).all()
     return activities
