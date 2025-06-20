@@ -1,6 +1,5 @@
-from fastapi import Request, status
+from fastapi import Depends, Request, status
 from starlette.exceptions import HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -11,6 +10,9 @@ from functools import lru_cache
 from config import settings
 from typing import Callable, Awaitable, Dict, Any
 
+from db.session import get_db
+from modules.users.services import user_service
+
 logger = logging.getLogger(__name__)
 
 COGNITO_REGION = settings.COGNITO_USER_POOL_ID.split('_')[0]
@@ -18,6 +20,9 @@ COGNITO_USER_POOL_ID = settings.COGNITO_USER_POOL_ID
 COGNITO_APP_CLIENT_ID = settings.COGNITO_CLIENT_ID
 
 JWKS_URL = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}/.well-known/jwks.json"
+
+def get_user_from_request(request: Request, db=Depends(get_db)):
+    return user_service.get_user_by_cognito_id(request.state.user_id, db)
 
 @lru_cache(maxsize=1)
 def get_jwks() -> Dict[str, Any]:

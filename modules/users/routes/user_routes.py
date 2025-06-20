@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request, status
 from fastapi import Depends
 from db.session import get_db
 from modules.users.schemas.saved_list_schema import SaveActivityRequest, SavedList, SavedListWithActivity
+from utils.auth_middleware import get_user_from_request
 from utils.security import get_cognito_client
 from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserCreate, UserLoginCredentials, UserSignUpResponse
 from modules.users.controllers import user_controller, saved_list_controller
@@ -72,8 +73,8 @@ async def confirm(user: UserConfirmData, client=Depends(get_cognito_client)):
     description="Get authenticated user saved activities",
     response_model=List[SavedListWithActivity]
 )
-async def saved_list(request: Request, db=Depends(get_db)):
-    return saved_list_controller.get_saved_list(request.state.user_id, db)
+async def saved_list(db=Depends(get_db), user=Depends(get_user_from_request)):
+    return saved_list_controller.get_saved_list(user.id, db)
 
 @router.post(
     "/saved_list",
@@ -84,8 +85,8 @@ async def saved_list(request: Request, db=Depends(get_db)):
         404: {"model": HttpErrorResponse, "description": "Activity or user not found"}
     }
 )
-async def add_saved_list(save_activity: SaveActivityRequest,request: Request,db=Depends(get_db)):
-    return saved_list_controller.save_activity_to_list(request.state.user_id, save_activity.activity_id, db)
+async def add_saved_list(save_activity: SaveActivityRequest, db=Depends(get_db), user=Depends(get_user_from_request)):
+    return saved_list_controller.save_activity_to_list(user.id, save_activity.activity_id, db)
 
 @router.delete(
     "/saved_list/{save_id}",
@@ -98,5 +99,5 @@ async def add_saved_list(save_activity: SaveActivityRequest,request: Request,db=
         401: {"model": HttpErrorResponse, "description": "User don't have permission to delete the save"},
     }
 )
-async def remove_from_saved_list(save_id: int,request: Request,db=Depends(get_db)):
-    return saved_list_controller.remove_activity_from_list(request.state.user_id, save_id, db)
+async def remove_from_saved_list(save_id: int, db=Depends(get_db), user=Depends(get_user_from_request)):
+    return saved_list_controller.remove_activity_from_list(user.id, save_id, db)
