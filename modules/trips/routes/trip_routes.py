@@ -129,7 +129,7 @@ def get_activity_videos(activity_id: int, db=Depends(get_db)) -> List[ActivityVi
     Generates a temporary signed URL to access a video stored in S3.
     
     - Validates that the video belongs to the specified activity
-    - Returns a URL that expires after 10 minutes (600 seconds)
+    - Returns a URL that expires after 1 hour (3600 seconds)
     - Enables secure video playback directly in the browser
     - The signed URL prevents unauthorized access to video content
     """,
