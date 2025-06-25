@@ -5,6 +5,7 @@ from modules.trips.schemas.activity_schema import ActivityVideosFilters, Activit
 from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate, ActivityFilter
 from modules.trips.models.trip import Activity, Location, ActivityVideos
 from utils.s3_client import upload_file_to_s3, generate_presigned_url
+from utils.error_models import ErrorCode, create_error_response
 import uuid
 import os
 
@@ -15,7 +16,10 @@ def create_activity(activity: ActivityCreate, db: Session):
     if not location:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Location with id {activity.location_id} not found."
+            detail=create_error_response(
+                ErrorCode.LOCATION_NOT_FOUND,
+                f"Location with id {activity.location_id} not found."
+            )
         )
     
     new_activity = Activity(
@@ -38,7 +42,10 @@ def get_activity(activity_id: int, db: Session):
     if not activity:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Activity with id {activity_id} not found."
+            detail=create_error_response(
+                ErrorCode.ACTIVITY_NOT_FOUND,
+                f"Activity with id {activity_id} not found."
+            )
         )
     return activity
 
@@ -97,7 +104,10 @@ def create_video(activity_id: int, video: UploadFile, title: str, description: s
     if video.content_type not in ALLOWED_VIDEO_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid video type. Allowed types are: {', '.join(ALLOWED_VIDEO_TYPES)}"
+            detail=create_error_response(
+                ErrorCode.INVALID_VIDEO_TYPE,
+                f"Invalid video type. Allowed types are: {', '.join(ALLOWED_VIDEO_TYPES)}"
+            )
         )
     
     file_extension = os.path.splitext(video.filename)[1]
@@ -133,7 +143,10 @@ def create_video(activity_id: int, video: UploadFile, title: str, description: s
         
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error uploading video: {str(e)}"
+            detail=create_error_response(
+                ErrorCode.VIDEO_UPLOAD_ERROR,
+                f"Error uploading video: {str(e)}"
+            )
         )
     
 
@@ -147,7 +160,10 @@ def get_video_signed_url(activity_id: int, video_id: int, db: Session, expires_i
     if not video:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Video with id {video_id} not found for activity {activity_id}."
+            detail=create_error_response(
+                ErrorCode.VIDEO_NOT_FOUND,
+                f"Video with id {video_id} not found for activity {activity_id}."
+            )
         )
     
     try:
@@ -162,5 +178,8 @@ def get_video_signed_url(activity_id: int, video_id: int, db: Session, expires_i
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error generating signed URL: {str(e)}"
+            detail=create_error_response(
+                ErrorCode.SIGNED_URL_ERROR,
+                f"Error generating signed URL: {str(e)}"
+            )
         )

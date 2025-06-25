@@ -9,6 +9,7 @@ import logging
 from functools import lru_cache
 from config import settings
 from typing import Callable, Awaitable, Dict, Any
+from utils.error_models import ErrorCode, create_error_response
 
 from db.session import get_db
 from modules.users.services import user_service
@@ -34,19 +35,28 @@ def get_jwks() -> Dict[str, Any]:
         logger.error("Timeout al obtener JWKS de Cognito")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service temporarily unavailable. Please try again."
+            detail=create_error_response(
+                ErrorCode.SERVICE_UNAVAILABLE,
+                "Service temporarily unavailable. Please try again."
+            )
         )
     except requests.exceptions.ConnectionError:
         logger.error("Error de conexión al obtener JWKS de Cognito")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service temporarily unavailable. Please try again."
+            detail=create_error_response(
+                ErrorCode.SERVICE_UNAVAILABLE,
+                "Service temporarily unavailable. Please try again."
+            )
         )
     except requests.exceptions.RequestException as e:
         logger.error(f"Error al obtener JWKS: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not fetch JWKS for token validation."
+            detail=create_error_response(
+                ErrorCode.JWKS_FETCH_ERROR,
+                "Could not fetch JWKS for token validation."
+            )
         )
 
 def get_public_key(token: str) -> Dict[str, str]:
@@ -57,7 +67,10 @@ def get_public_key(token: str) -> Dict[str, str]:
         logger.warning(f"Error al obtener header no verificado del JWT: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token format",
+            detail=create_error_response(
+                ErrorCode.INVALID_TOKEN_FORMAT,
+                "Invalid token format"
+            ),
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -65,7 +78,10 @@ def get_public_key(token: str) -> Dict[str, str]:
     if not kid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token missing key ID",
+            detail=create_error_response(
+                ErrorCode.TOKEN_MISSING_KEY_ID,
+                "Token missing key ID"
+            ),
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -81,7 +97,10 @@ def get_public_key(token: str) -> Dict[str, str]:
     
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Unable to find appropriate key",
+        detail=create_error_response(
+            ErrorCode.UNABLE_TO_FIND_KEY,
+            "Unable to find appropriate key"
+        ),
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -92,14 +111,20 @@ def validate_token_payload(payload: Dict[str, Any]) -> None:
         if field not in payload:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Token missing required field: {field}",
+                detail=create_error_response(
+                    ErrorCode.TOKEN_MISSING_FIELD,
+                    f"Token missing required field: {field}"
+                ),
                 headers={"WWW-Authenticate": "Bearer"},
             )
     
     if payload.get("token_use") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token type",
+            detail=create_error_response(
+                ErrorCode.INVALID_TOKEN_TYPE,
+                "Invalid token type"
+            ),
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -127,7 +152,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             if not auth_header:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Authorization header missing",
+                    detail=create_error_response(
+                        ErrorCode.AUTHORIZATION_HEADER_MISSING,
+                        "Authorization header missing"
+                    ),
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
@@ -135,7 +163,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             if len(parts) != 2 or parts[0].lower() != "bearer":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authorization header format",
+                    detail=create_error_response(
+                        ErrorCode.INVALID_AUTHORIZATION_FORMAT,
+                        "Invalid authorization header format"
+                    ),
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
@@ -162,12 +193,15 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.warning(f"Error al decodificar JWT: {e}")
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"error": {"code": 401, "message": "Invalid or expired token", "type": "authentication_error"}},
+                content=create_error_response(
+                    ErrorCode.INVALID_OR_EXPIRED_TOKEN,
+                    "Invalid or expired token"
+                ),
                 headers={"WWW-Authenticate": "Bearer"},
             )
         except HTTPException as exc:
             return JSONResponse(
                 status_code=exc.status_code,
-                content={"error": {"code": exc.status_code, "message": exc.detail, "type": "authentication_error"}},
+                content=exc.detail,
                 headers=exc.headers,
             )
