@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class TripBase(BaseModel):
@@ -19,6 +19,7 @@ class ActivityCreate(BaseModel):
     tip: str | None = Field(default=None, description="The tip of the activity")
     movie: str | None = Field(default=None, description="The movie of the activity")
     clothes: str | None = Field(default=None, description="The clothes of the activity")
+    tags: List[str] = Field(default=[], description="Tags to categorize the activity")
 
 
 class ActivityUpdate(BaseModel):
@@ -30,6 +31,7 @@ class ActivityUpdate(BaseModel):
     tip: str | None = None
     movie: str | None = None
     clothes: str | None = None
+    tags: List[str] | None = None
 
 
 class Activity(ActivityCreate):
@@ -43,6 +45,7 @@ class ActivityFilter(BaseModel):
     limit: int = 100
     location_id: Optional[int] = None
     is_active: Optional[bool] = None
+    tag: Optional[str] = Field(default=None, description="Search activities by partial tag match")
 
 
 class VideoCreate(BaseModel):

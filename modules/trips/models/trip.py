@@ -1,5 +1,10 @@
+<<<<<<< feature/tags_in_activities
+from typing import List, TYPE_CHECKING
+from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, ARRAY, Text
+=======
 from typing import List, TYPE_CHECKING, Optional
 from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, func
+>>>>>>> main
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
 from modules.users.models.user import SavedList, User
@@ -46,6 +51,7 @@ class Activity(Base):
     tip = Column(String, nullable=False)
     movie = Column(String, nullable=False)
     clothes = Column(String, nullable=False)
+    tags = Column(ARRAY(Text), default=lambda: [], nullable=False)
 
     location: Mapped['Location'] = relationship(back_populates="activities")
     videos: Mapped[List['ActivityVideos']] = relationship(back_populates="activity")
