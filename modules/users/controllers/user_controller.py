@@ -7,6 +7,7 @@ from modules.users.models.user import User
 from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserLoginCredentials, UserCreate, UserSignUpResponse
 from modules.users.services import user_service
 from modules.users.services import cognito_service
+from utils.error_models import ErrorCode, create_error_response
 
 
 def login(user: UserLoginCredentials, client: CognitoIdentityProviderClient) -> UserAuthResult:
@@ -20,7 +21,13 @@ def login(user: UserLoginCredentials, client: CognitoIdentityProviderClient) -> 
         }
     except ClientError as e:
         if e.response["Error"]["Code"] == "UserNotConfirmedException":
-            raise HTTPException(403, e.response.get('message'))
+            raise HTTPException(
+                status_code=403, 
+                detail=create_error_response(
+                    ErrorCode.USER_NOT_CONFIRMED,
+                    e.response.get('message', 'User not confirmed')
+                )
+            )
         raise e
 
 

@@ -18,6 +18,15 @@ from modules.trips.controllers.trip_controller import (
     get_video_signed_url_controller
 )
 from db.session import get_db
+from utils.error_models import (
+    ErrorCode, 
+    create_error_response, 
+    ActivityNotFoundErrorResponse,
+    LocationNotFoundErrorResponse,
+    VideoNotFoundErrorResponse,
+    VideoUploadErrorResponse,
+    ServerErrorResponse
+)
 
 router = APIRouter()
 
@@ -25,6 +34,9 @@ router = APIRouter()
     "/activities",
     response_model=Activity,
     status_code=201,
+    responses={
+        404: {"model": LocationNotFoundErrorResponse, "description": "Location not found"}
+    },
     summary="Create a new activity",
     description="Creates a new activity associated with a location, including details like history, tips, and media links.",
 )
@@ -46,6 +58,9 @@ async def get_activities_route(
 @router.get(
     "/activities/{activity_id}",
     response_model=Activity,
+    responses={
+        404: {"model": ActivityNotFoundErrorResponse, "description": "Activity not found"}
+    },
     summary="Get a specific activity",
     description="Retrieves detailed information about a single activity by its ID.",
 )
@@ -55,6 +70,9 @@ async def get_activity_route(activity_id: int, db: Session = Depends(get_db)):
 @router.patch(
     "/activities/{activity_id}",
     response_model=Activity,
+    responses={
+        404: {"model": ActivityNotFoundErrorResponse, "description": "Activity not found"}
+    },
     summary="Update an activity",
     description="Updates the data of an existing activity. All fields are optional.",
 )
@@ -66,6 +84,9 @@ async def update_activity_route(
 @router.delete(
     "/activities/{activity_id}",
     status_code=204,
+    responses={
+        404: {"model": ActivityNotFoundErrorResponse, "description": "Activity not found"}
+    },
     summary="Delete an activity",
     description="Deletes an activity from the system by its ID.",
 )
@@ -76,6 +97,11 @@ async def delete_activity_route(activity_id: int, db: Session = Depends(get_db))
 @router.post(
     "/activities/{activity_id}/videos",
     status_code=201,
+    responses={
+        400: {"model": VideoUploadErrorResponse, "description": "Invalid video file or missing required fields"},
+        404: {"model": ActivityNotFoundErrorResponse, "description": "Activity not found"},
+        500: {"model": ServerErrorResponse, "description": "Video upload failed"}
+    },
     summary="Upload a video for an activity",
     description="""
     Uploads a video file for a specific activity.
@@ -100,17 +126,26 @@ async def create_video_route(
     if not video:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Video file is required"
+            detail=create_error_response(
+                ErrorCode.VIDEO_FILE_REQUIRED,
+                "Video file is required"
+            )
         )
     if not title:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Title is required"
+            detail=create_error_response(
+                ErrorCode.VIDEO_TITLE_REQUIRED,
+                "Title is required"
+            )
         )
     if not description:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Description is required"
+            detail=create_error_response(
+                ErrorCode.VIDEO_DESCRIPTION_REQUIRED,
+                "Description is required"
+            )
         )
         
     return create_video_controller(activity_id, video, title, description, db)
@@ -124,6 +159,9 @@ def get_activity_videos(activity_id: int, db=Depends(get_db)) -> List[ActivityVi
 @router.get(
     "/activities/{activity_id}/videos/{video_id}/url",
     response_model=VideoSignedUrlResponse,
+    responses={
+        404: {"model": VideoNotFoundErrorResponse, "description": "Video not found"}
+    },
     summary="Get a signed URL for a video",
     description="""
     Generates a temporary signed URL to access a video stored in S3.

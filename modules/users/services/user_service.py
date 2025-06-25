@@ -4,6 +4,7 @@ from sqlalchemy import desc, select
 from modules.users.models.user import SavedList, User
 from modules.users.schemas.user_schema import UserCreate
 from sqlalchemy.orm import Session, joinedload
+from utils.error_models import ErrorCode, create_error_response
 
 from modules.users.services import cognito_service
 from modules.trips.services import activities_service
@@ -11,7 +12,14 @@ from modules.trips.services import activities_service
 
 def create_user(user: UserCreate, client: CognitoIdentityProviderClient, db: Session):
     user_exists = db.query(User).filter(User.email == user.email).first()
-    if (user_exists): raise HTTPException(400, "An user is already registered with this email.")
+    if (user_exists): 
+        raise HTTPException(
+            status_code=400, 
+            detail=create_error_response(
+                ErrorCode.USER_ALREADY_EXISTS,
+                "An user is already registered with this email."
+            )
+        )
     cognito_user = cognito_service.sign_up(user, client)
     new_user = User(email=user.email, cognito_id=cognito_user.get(
         'UserSub'), name=user.email.split('@')[0])
@@ -52,8 +60,22 @@ def remove_activity_from_list(user_id: int, save_id: int, db: Session):
         select(SavedList)
         .where(SavedList.id == save_id)
     ).scalar_one_or_none()
-    if (existing_save == None): raise HTTPException(status.HTTP_404_NOT_FOUND, f"Save with id {save_id} not found")
-    if (existing_save.user_id != user_id): raise HTTPException(status.HTTP_401_UNAUTHORIZED, f"This user can't delete this save")
+    if (existing_save == None): 
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=create_error_response(
+                ErrorCode.SAVE_NOT_FOUND,
+                f"Save with id {save_id} not found"
+            )
+        )
+    if (existing_save.user_id != user_id): 
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail=create_error_response(
+                ErrorCode.UNAUTHORIZED_DELETE,
+                f"This user can't delete this save"
+            )
+        )
     db.delete(existing_save)
     db.commit()
     return existing_save

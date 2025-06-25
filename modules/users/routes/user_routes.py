@@ -7,7 +7,12 @@ from utils.auth_middleware import get_user_from_request
 from utils.security import get_cognito_client
 from modules.users.schemas.user_schema import UserAuthResult, UserConfirmData, UserCreate, UserLoginCredentials, UserSignUpResponse
 from modules.users.controllers import user_controller, saved_list_controller
-from error_handlers import HttpErrorResponse
+from utils.error_models import (
+    LoginErrorResponse, 
+    SignUpErrorResponse,
+    SavedListErrorResponse,
+    ActivityNotFoundErrorResponse
+)
 
 router = APIRouter()
 
@@ -21,6 +26,9 @@ async def get_users(db=Depends(get_db)):
         "/sign_up",
         response_model=UserSignUpResponse,
         status_code=status.HTTP_201_CREATED,
+        responses={
+            400: {"model": SignUpErrorResponse, "description": "User already exists"}
+        },
         summary="Create a new user",
          description="""
 Registers a new user in the system using Amazon Cognito.
@@ -37,8 +45,8 @@ async def create_user(user: UserCreate, client=Depends(get_cognito_client), db=D
 @router.post("/login", 
 response_model=UserAuthResult,
 responses={
-    400: {"model": HttpErrorResponse, "description": "Invalid credentials" },
-    403: {"model": HttpErrorResponse, "description": "User not confirmed" }
+    400: {"model": LoginErrorResponse, "description": "Invalid credentials" },
+    403: {"model": LoginErrorResponse, "description": "User not confirmed" }
 },
 summary="Login a user",
 description="""
@@ -82,7 +90,7 @@ async def saved_list(db=Depends(get_db), user=Depends(get_user_from_request)):
     description="Add a new activity to current user saved list",
     response_model=SavedList,
     responses={
-        404: {"model": HttpErrorResponse, "description": "Activity or user not found"}
+        404: {"model": ActivityNotFoundErrorResponse, "description": "Activity or user not found"}
     }
 )
 async def add_saved_list(save_activity: SaveActivityRequest, db=Depends(get_db), user=Depends(get_user_from_request)):
@@ -95,8 +103,8 @@ async def add_saved_list(save_activity: SaveActivityRequest, db=Depends(get_db),
     response_model=SavedList,
     responses={
         200: {"description": "Success response. Return deleted save"},
-        404: {"model": HttpErrorResponse, "description": "Save not found"},
-        401: {"model": HttpErrorResponse, "description": "User don't have permission to delete the save"},
+        404: {"model": SavedListErrorResponse, "description": "Save not found"},
+        401: {"model": SavedListErrorResponse, "description": "User don't have permission to delete the save"},
     }
 )
 async def remove_from_saved_list(save_id: int, db=Depends(get_db), user=Depends(get_user_from_request)):
