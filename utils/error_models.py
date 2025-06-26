@@ -47,6 +47,14 @@ class ErrorCode(str, Enum):
 class HttpErrorResponse(BaseModel):
     error_code: ErrorCode
     message: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "error_code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred"
+            }
+        }
 
 
 # Specific error response models by endpoint context
@@ -55,7 +63,7 @@ class LoginErrorResponse(BaseModel):
     message: str = "Invalid credentials provided"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "examples": {
                 "invalid_credentials": {
                     "summary": "Invalid Credentials",
@@ -80,7 +88,7 @@ class SignUpErrorResponse(BaseModel):
     message: str = "User already exists"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error_code": "USER_ALREADY_EXISTS",
                 "message": "An user is already registered with this email."
@@ -93,7 +101,7 @@ class ActivityNotFoundErrorResponse(BaseModel):
     message: str = "Activity not found"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error_code": "ACTIVITY_NOT_FOUND",
                 "message": "Activity with id 123 not found"
@@ -106,7 +114,7 @@ class LocationNotFoundErrorResponse(BaseModel):
     message: str = "Location not found"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error_code": "LOCATION_NOT_FOUND",
                 "message": "Location with id 456 not found"
@@ -119,7 +127,7 @@ class VideoNotFoundErrorResponse(BaseModel):
     message: str = "Video not found"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error_code": "VIDEO_NOT_FOUND",
                 "message": "Video with id 789 not found for activity 123"
@@ -132,7 +140,7 @@ class VideoUploadErrorResponse(BaseModel):
     message: str = "Video upload failed"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "examples": {
                 "video_upload_error": {
                     "summary": "Upload Failed",
@@ -178,7 +186,7 @@ class SavedListErrorResponse(BaseModel):
     message: str = "Save not found"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "examples": {
                 "save_not_found": {
                     "summary": "Save Not Found",
@@ -203,7 +211,7 @@ class AuthTokenErrorResponse(BaseModel):
     message: str = "Invalid or expired token"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "examples": {
                 "invalid_token": {
                     "summary": "Invalid Token",
@@ -235,7 +243,7 @@ class ValidationErrorResponse(BaseModel):
     message: str = "Validation error occurred"
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error_code": "VALIDATION_ERROR",
                 "message": "Validation error: email: field required; password: field required"
@@ -248,27 +256,25 @@ class ServerErrorResponse(BaseModel):
     message: str = "Internal server error"
     
     class Config:
-        schema_extra = {
-            "examples": {
-                "internal_server_error": {
-                    "summary": "Internal Server Error",
-                    "value": {
-                        "error_code": "INTERNAL_SERVER_ERROR",
-                        "message": "Internal server error"
-                    }
-                },
-                "service_unavailable": {
-                    "summary": "Service Unavailable",
-                    "value": {
-                        "error_code": "SERVICE_UNAVAILABLE",
-                        "message": "Service temporarily unavailable. Please try again."
-                    }
-                }
+        json_schema_extra = {
+            "example": {
+                "error_code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred while processing your request"
             }
         }
-    
+
 
 def create_error_response(error_code: ErrorCode, message: str) -> dict:
+    """
+    Creates a standardized error response dictionary.
+    
+    Args:
+        error_code: The specific error code for the error
+        message: Human-readable error message
+        
+    Returns:
+        dict: Standardized error response
+    """
     return {
         "error_code": error_code.value,
         "message": message
