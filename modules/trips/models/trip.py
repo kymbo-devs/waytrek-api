@@ -1,14 +1,8 @@
-<<<<<<< feature/tags_in_activities
-from typing import List, TYPE_CHECKING
+from typing import List
 from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, ARRAY, Text
-=======
-from typing import List, TYPE_CHECKING, Optional
-from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, func
->>>>>>> main
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
 from modules.users.models.user import SavedList, User
-from sqlalchemy.orm import mapped_column
 
 
 
