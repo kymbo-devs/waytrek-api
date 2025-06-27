@@ -144,6 +144,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return path in self.public_paths
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         if self.is_public_path(request.url.path):
             return await call_next(request)
 
