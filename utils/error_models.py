@@ -64,24 +64,17 @@ class LoginErrorResponse(BaseModel):
     
     class Config:
         json_schema_extra = {
-            "examples": {
-                "invalid_credentials": {
-                    "summary": "Invalid Credentials",
-                    "value": {
-                        "error_code": "INVALID_CREDENTIALS",
-                        "message": "Invalid credentials provided"
-                    }
+            "examples": [
+                {
+                    "error_code": "INVALID_CREDENTIALS",
+                    "message": "Invalid credentials provided"
                 },
-                "user_not_confirmed": {
-                    "summary": "User Not Confirmed",
-                    "value": {
-                        "error_code": "USER_NOT_CONFIRMED",
-                        "message": "User account not confirmed"
-                    }
+                {
+                    "error_code": "USER_NOT_CONFIRMED", 
+                    "message": "User account not confirmed"
                 }
-            }
+            ]
         }
-
 
 class SignUpErrorResponse(BaseModel):
     error_code: ErrorCode = ErrorCode.USER_ALREADY_EXISTS
@@ -141,68 +134,45 @@ class VideoUploadErrorResponse(BaseModel):
     
     class Config:
         json_schema_extra = {
-            "examples": {
-                "video_upload_error": {
-                    "summary": "Upload Failed",
-                    "value": {
-                        "error_code": "VIDEO_UPLOAD_ERROR",
-                        "message": "Error uploading video: File size too large"
-                    }
+            "examples": [
+                {
+                    "error_code": "VIDEO_UPLOAD_ERROR",
+                    "message": "Error uploading video: File size too large"
                 },
-                "invalid_video_type": {
-                    "summary": "Invalid Type",
-                    "value": {
-                        "error_code": "INVALID_VIDEO_TYPE",
-                        "message": "Invalid video type. Allowed types are: video/mp4, video/quicktime, video/x-msvideo"
-                    }
+                {
+                    "error_code": "INVALID_VIDEO_TYPE",
+                    "message": "Invalid video type. Allowed types are: video/mp4, video/quicktime, video/x-msvideo"
                 },
-                "video_file_required": {
-                    "summary": "File Required",
-                    "value": {
-                        "error_code": "VIDEO_FILE_REQUIRED",
-                        "message": "Video file is required"
-                    }
+                {
+                    "error_code": "VIDEO_FILE_REQUIRED",
+                    "message": "Video file is required"
                 },
-                "video_title_required": {
-                    "summary": "Title Required",
-                    "value": {
-                        "error_code": "VIDEO_TITLE_REQUIRED",
-                        "message": "Title is required"
-                    }
+                {
+                    "error_code": "VIDEO_TITLE_REQUIRED",
+                    "message": "Title is required"
                 },
-                "video_description_required": {
-                    "summary": "Description Required",
-                    "value": {
-                        "error_code": "VIDEO_DESCRIPTION_REQUIRED",
-                        "message": "Description is required"
-                    }
+                {
+                    "error_code": "VIDEO_DESCRIPTION_REQUIRED",
+                    "message": "Description is required"
                 }
-            }
+            ]
         }
-
-
 class SavedListErrorResponse(BaseModel):
     error_code: ErrorCode = ErrorCode.SAVE_NOT_FOUND
     message: str = "Save not found"
     
     class Config:
         json_schema_extra = {
-            "examples": {
-                "save_not_found": {
-                    "summary": "Save Not Found",
-                    "value": {
-                        "error_code": "SAVE_NOT_FOUND",
-                        "message": "Save with id 123 not found"
-                    }
+            "examples": [
+                {
+                    "error_code": "SAVE_NOT_FOUND",
+                    "message": "Save with id 123 not found"
                 },
-                "unauthorized_delete": {
-                    "summary": "Unauthorized Delete",
-                    "value": {
-                        "error_code": "UNAUTHORIZED_DELETE",
-                        "message": "This user can't delete this save"
-                    }
+                {
+                    "error_code": "UNAUTHORIZED_DELETE",
+                    "message": "This user can't delete this save"
                 }
-            }
+            ]
         }
 
 
@@ -212,31 +182,21 @@ class AuthTokenErrorResponse(BaseModel):
     
     class Config:
         json_schema_extra = {
-            "examples": {
-                "invalid_token": {
-                    "summary": "Invalid Token",
-                    "value": {
-                        "error_code": "INVALID_OR_EXPIRED_TOKEN",
-                        "message": "Invalid or expired token"
-                    }
+            "examples": [
+                {
+                    "error_code": "INVALID_OR_EXPIRED_TOKEN",
+                    "message": "Invalid or expired token"
                 },
-                "missing_auth_header": {
-                    "summary": "Missing Authorization",
-                    "value": {
-                        "error_code": "AUTHORIZATION_HEADER_MISSING",
-                        "message": "Authorization header missing"
-                    }
+                {
+                    "error_code": "AUTHORIZATION_HEADER_MISSING",
+                    "message": "Authorization header missing"
                 },
-                "invalid_auth_format": {
-                    "summary": "Invalid Format",
-                    "value": {
-                        "error_code": "INVALID_AUTHORIZATION_FORMAT",
-                        "message": "Invalid authorization header format"
-                    }
+                {
+                    "error_code": "INVALID_AUTHORIZATION_FORMAT",
+                    "message": "Invalid authorization header format"
                 }
-            }
+            ]
         }
-
 
 class ValidationErrorResponse(BaseModel):
     error_code: ErrorCode = ErrorCode.VALIDATION_ERROR
