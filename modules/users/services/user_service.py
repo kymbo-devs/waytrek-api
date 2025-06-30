@@ -4,28 +4,48 @@ from sqlalchemy import desc, select
 from modules.users.models.user import SavedList, User
 from modules.users.schemas.user_schema import UserCreate
 from sqlalchemy.orm import Session, joinedload
+from config import settings
 from utils.error_models import ErrorCode, create_error_response
 
 from modules.users.services import cognito_service
 from modules.trips.services import activities_service
 
+COGNITO_USER_POOL_ID = settings.COGNITO_USER_POOL_ID
 
 def create_user(user: UserCreate, client: CognitoIdentityProviderClient, db: Session):
     user_exists = db.query(User).filter(User.email == user.email).first()
-    if (user_exists): 
+    if user_exists:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=create_error_response(
                 ErrorCode.USER_ALREADY_EXISTS,
-                "An user is already registered with this email."
+                "A user is already registered with this email."
+            )
+        )    
+    cognito_user = cognito_service.sign_up(user, client)
+    cognito_user_sub = cognito_user.get('UserSub')
+    cognito_group_id = user.cognito_group_id or "GENERAL_USER"
+    
+    try:
+        client.admin_add_user_to_group(
+            UserPoolId=COGNITO_USER_POOL_ID, 
+            Username=user.email,
+            GroupName=cognito_group_id
+        )
+    except client.exceptions.ClientError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=create_error_response(
+                ErrorCode.USER_GROUP_ADDITION_FAILED,
+                "Failed to add user to a group."
             )
         )
-    cognito_user = cognito_service.sign_up(user, client)
-    new_user = User(email=user.email, cognito_id=cognito_user.get(
-        'UserSub'), name=user.email.split('@')[0])
+    
+    new_user = User(email=user.email, cognito_id=cognito_user_sub, name=user.email.split('@')[0], cognito_group_id=cognito_group_id)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
     return new_user
 
 def get_saved_list(user_id: int, db: Session):

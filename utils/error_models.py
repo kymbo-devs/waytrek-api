@@ -17,6 +17,7 @@ class ErrorCode(str, Enum):
     
     # User errors
     USER_ALREADY_EXISTS = "USER_ALREADY_EXISTS"
+    USER_GROUP_ADDITION_FAILED= "USER_GROUP_ADDITION_FAILED"
     
     # Activity and Trip errors
     ACTIVITY_NOT_FOUND = "ACTIVITY_NOT_FOUND"

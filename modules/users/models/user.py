@@ -12,6 +12,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
     cognito_id = Column(String, nullable=False, unique=True)
+    cognito_group_id = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     user_type_id = Column(Integer, ForeignKey("users_types.id", ondelete="cascade"))
     user_type: Mapped['UserType'] = relationship(back_populates="users")
