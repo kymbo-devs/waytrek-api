@@ -2,7 +2,7 @@ from typing import List
 from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, ARRAY, Text
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
-from modules.activities.models.location import Location
+from modules.locations.models.location import Location
 
 class Activity(Base):
     __tablename__ = "activities"
