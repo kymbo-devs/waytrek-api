@@ -27,7 +27,6 @@ def upgrade() -> None:
             name VARCHAR NOT NULL,
             email VARCHAR NOT NULL,
             cognito_id VARCHAR NOT NULL,
-            cognito_group_id VARCHAR NOT NULL,
             is_active BOOLEAN,
             PRIMARY KEY (id),
             UNIQUE (cognito_id),
