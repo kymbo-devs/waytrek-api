@@ -1,6 +1,7 @@
 import logging
 from db.session import SessionLocal
-from modules.trips.models.trip import Location, Activity
+from modules.trips.models.trip import Location
+from modules.activities.models.activity import Activity
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

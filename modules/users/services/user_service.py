@@ -1,16 +1,16 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from mypy_boto3_cognito_idp import CognitoIdentityProviderClient
-from sqlalchemy import select
+from sqlalchemy import select, desc
+from sqlalchemy.orm import Session, joinedload
 from modules.users.models.user import User
 from modules.users.schemas.user_schema import UserCreate
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session, joinedload
 from config import settings
 from utils.error_models import ErrorCode, create_error_response
 from modules.users.constants import get_default_group, is_valid_group
-
 from modules.users.services import cognito_service
-from modules.trips.services import activities_service
+from modules.activities.services.activities_service import get_activity
+from modules.saved_list.models.saved_list import SavedList
 
 COGNITO_USER_POOL_ID = settings.COGNITO_USER_POOL_ID
 
@@ -81,7 +81,7 @@ def add_activity_to_list(user_id: int, activity_id: int, db: Session):
         .where(SavedList.activity_id == activity_id)
     ).scalar_one_or_none()
     if (existing_save): return existing_save
-    activity = activities_service.get_activity(activity_id, db)
+    activity = get_activity(activity_id, db)
     saved_activity = SavedList(
         user_id=user_id,
         activity_id=activity.id
