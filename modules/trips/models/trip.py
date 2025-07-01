@@ -1,8 +1,9 @@
 from typing import List
-from sqlalchemy import Boolean, Column, Integer, ForeignKey, String, DateTime, ARRAY, Text
+from sqlalchemy import  Column, Integer, ForeignKey, String, DateTime
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
-from modules.users.models.user import SavedList, User
+from modules.activities.models.location import Location
+from modules.users.models.user import User
 
 
 
@@ -19,49 +20,7 @@ class Trip(Base):
     
 User.trips = relationship(Trip, back_populates="user")
 Trip.user= relationship(User, back_populates="trips")
-
-class Location(Base):
-    __tablename__ = "locations"
-
-    id = Column(Integer, primary_key=True, nullable=False)
-    country = Column(String, nullable=False)
-    city = Column(String)
-    nickname = Column(String)
-    flag_url = Column(String)
-
-    activities: Mapped[List['Activity']] = relationship(back_populates="location")
-    trips: Mapped[List['Trip']] = relationship(back_populates="location")
-
-
-class Activity(Base):
-    __tablename__ = "activities"
-
-    id = Column(Integer, primary_key=True, nullable=False)
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=False)
-    location_id = Column(Integer, ForeignKey("locations.id", ondelete="cascade"))
-    is_active = Column(Boolean, default=False)
-    history = Column(String, nullable=False)
-    tip = Column(String, nullable=False)
-    movie = Column(String, nullable=False)
-    clothes = Column(String, nullable=False)
-    tags = Column(ARRAY(Text), default=lambda: [], nullable=False)
-
-    location: Mapped['Location'] = relationship(back_populates="activities")
-    videos: Mapped[List['ActivityVideos']] = relationship(back_populates="activity")
-
-class ActivityVideos(Base):
-    __tablename__ = "activity_videos"
-    
-    id = Column(Integer, primary_key=True, nullable=False)
-    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="cascade"))
-    url = Column(String, nullable=False)
-    file_key = Column(String, nullable=False)
-    title = Column(String, nullable=False)
-    description = Column(String, nullable=False)
-
-    activity: Mapped['Activity'] = relationship(back_populates="videos")
-
+Location.trips = relationship(Trip, back_populates="location")
 
 class TripDocuments(Base):
     __tablename__ = "trip_documents"
@@ -93,5 +52,3 @@ class Schedule(Base):
     activity_name = Column(String, nullable=False)
 
     trip_schedule: Mapped['TripSchedule'] = relationship(back_populates="schedule")
-
-SavedList.activity = relationship(Activity)

@@ -1,7 +1,6 @@
 from typing import List
 from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, func
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-from datetime import datetime
+from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
 
 
@@ -23,18 +22,3 @@ class UserType(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     users: Mapped[List["User"]] = relationship(back_populates="user_type")
-
-
-class SavedList(Base):
-    __tablename__ = "saved_list"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
-    activity_id: Mapped[int] = mapped_column(ForeignKey('activities.id'))
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-
-    user: Mapped["User"] = relationship(back_populates="saved_list")
-
-
-User.saved_list = relationship(
-    SavedList, back_populates="user", cascade="all, delete-orphan")

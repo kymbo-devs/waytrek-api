@@ -2,9 +2,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import HTTPException, status, UploadFile
-from modules.trips.schemas.activity_schema import ActivityVideosFilters, ActivityVideosResponse
-from modules.trips.schemas.trip_schema import ActivityCreate, ActivityUpdate, ActivityFilter
-from modules.trips.models.trip import Activity, Location, ActivityVideos
+from modules.activities.schemas.activity_schema import ActivityVideosFilters, ActivityVideosResponse
+from modules.activities.schemas.activity_schema import ActivityCreate, ActivityUpdate, ActivityFilter
+from modules.activities.models.activity import Activity, Location, ActivityVideos
 from utils.s3_client import upload_file_to_s3, generate_presigned_url
 from utils.error_models import ErrorCode, create_error_response
 import uuid
