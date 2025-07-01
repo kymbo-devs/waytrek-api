@@ -1,8 +1,9 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from mypy_boto3_cognito_idp import CognitoIdentityProviderClient
-from sqlalchemy import desc, select
-from modules.users.models.user import SavedList, User
+from sqlalchemy import select
+from modules.users.models.user import User
 from modules.users.schemas.user_schema import UserCreate
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import Session, joinedload
 from config import settings
 from utils.error_models import ErrorCode, create_error_response

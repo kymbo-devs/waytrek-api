@@ -1,13 +1,13 @@
 from fastapi import APIRouter
 from modules.tips.schemas.tip_schema import TipCreate
-from modules.tips.controllers.tip_controller import create_tip, get_tip
+from modules.tips.controllers import tip_controller
 
 router = APIRouter()
 
-@router.post("/tips")
+@router.post("")
 async def create_tip(tip: TipCreate):
-    return create_tip(tip)
+    return tip_controller.create_tip(tip)
 
-@router.get("/tips/{tip_id}")
+@router.get("/{tip_id}")
 async def get_tip(tip_id: int):
-    return get_tip(tip_id)
+    return tip_controller.get_tip(tip_id)
