@@ -9,6 +9,7 @@ from modules.trips.routes.trip_routes import router as trips_router
 from modules.tips.routes.tip_routes import router as tips_router
 from modules.activities.routes.activity_routes import router as activity_routes
 from modules.saved_list.routes.saved_list_routes import router as saved_list_routes
+from modules.locations.routes.location_routes import router as location_routes
 from config import settings
 
 router = APIRouter(prefix=settings.API_PREFIX, responses={
@@ -22,6 +23,7 @@ router.include_router(trips_router, prefix="/trips", tags=["trips"])
 router.include_router(tips_router, prefix="/tips", tags=["tips"])
 router.include_router(activity_routes, prefix="/activities", tags=["activities"])
 router.include_router(saved_list_routes, prefix="/saved_list", tags=["saved list"])
+router.include_router(location_routes, prefix="/locations", tags=["locations"])
 
 
 

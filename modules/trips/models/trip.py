@@ -2,7 +2,7 @@ from typing import List
 from sqlalchemy import  Column, Integer, ForeignKey, String, DateTime
 from sqlalchemy.orm import relationship, Mapped
 from db.session import Base
-from modules.activities.models.location import Location
+from modules.locations.models.location import Location
 from modules.users.models.user import User
 
 
