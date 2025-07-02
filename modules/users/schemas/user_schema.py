@@ -10,7 +10,11 @@ class UserBase(UserLoginCredentials):
     pass
 
 class UserCreate(UserBase):
-    pass
+    cognito_group_id: str | None = Field(
+        None, 
+        example="GENERAL_USER",
+        description="Cognito group. Available options: GENERAL_USER, ADMIN. Defaults to GENERAL_USER if not provided."
+    )
 
 class UserConfirmData(BaseModel):
     email: EmailStr = Field(..., example="test@example.com")
