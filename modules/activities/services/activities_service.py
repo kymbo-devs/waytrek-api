@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import HTTPException, status, UploadFile
 from modules.activities.schemas.activity_schema import ActivityVideosFilters, ActivityVideosResponse
-from modules.activities.schemas.activity_schema import ActivityCreate, ActivityUpdate, ActivityFilter
+from modules.activities.schemas.activity_schema import ActivityCreate, ActivityUpdate, ActivityFilter, VideoUpdate
 from modules.activities.models.activity import Activity, Location, ActivityVideos
 from utils.s3_client import upload_file_to_s3, generate_presigned_url
 from utils.error_models import ErrorCode, create_error_response
@@ -32,7 +32,10 @@ def create_activity(activity: ActivityCreate, db: Session):
         tip=activity.tip,
         movie=activity.movie,
         clothes=activity.clothes,
-        tags=activity.tags
+        tags=activity.tags,
+        price=activity.price,
+        photo_url=activity.photo_url,
+        population=activity.population
         )
     db.add(new_activity)
     db.commit()
@@ -64,6 +67,20 @@ def get_activities(db: Session, filters: ActivityFilter):
         query = query.filter(
             func.array_to_string(Activity.tags, ',').ilike(f"%{filters.tag}%")
         )
+    
+    if filters.min_price is not None:
+        query = query.filter(Activity.price >= filters.min_price)
+    
+    if filters.max_price is not None:
+        query = query.filter(Activity.price <= filters.max_price)
+    
+    if filters.min_population is not None:
+        query = query.filter(Activity.population >= filters.min_population)
+    
+    if filters.max_population is not None:
+        query = query.filter(Activity.population <= filters.max_population)
+    
+    query = query.order_by(Activity.population.desc())
         
     activities = query.offset(filters.skip).limit(filters.limit).all()
     return activities
@@ -188,5 +205,93 @@ def get_video_signed_url(activity_id: int, video_id: int, db: Session, expires_i
             detail=create_error_response(
                 ErrorCode.SIGNED_URL_ERROR,
                 f"Error generating signed URL: {str(e)}"
+            )
+        )
+
+def delete_video(activity_id: int, video_id: int, db: Session):
+    """Delete a video from both database and S3 storage."""
+    activity = get_activity(activity_id, db)
+    
+    video = db.query(ActivityVideos).filter(
+        ActivityVideos.id == video_id,
+        ActivityVideos.activity_id == activity_id
+    ).first()
+    
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=create_error_response(
+                ErrorCode.VIDEO_NOT_FOUND,
+                f"Video with id {video_id} not found for activity {activity_id}."
+            )
+        )
+    
+    file_key = video.file_key
+    
+    try:
+        db.delete(video)
+        db.commit()
+        
+        from utils.s3_client import delete_file_from_s3
+        delete_file_from_s3(file_key)
+        
+        return {"detail": f"Video {video_id} deleted successfully from activity {activity_id}"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                ErrorCode.VIDEO_DELETE_ERROR,
+                f"Error deleting video: {str(e)}"
+            )
+        )
+
+def update_video(activity_id: int, video_id: int, video_data: VideoUpdate, db: Session):
+    """Update video title and/or description in the database."""
+    activity = get_activity(activity_id, db)
+    
+    video = db.query(ActivityVideos).filter(
+        ActivityVideos.id == video_id,
+        ActivityVideos.activity_id == activity_id
+    ).first()
+    
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=create_error_response(
+                ErrorCode.VIDEO_NOT_FOUND,
+                f"Video with id {video_id} not found for activity {activity_id}."
+            )
+        )
+    
+    update_data = video_data.model_dump(exclude_unset=True)
+    
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=create_error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "At least one field (title or description) must be provided for update."
+            )
+        )
+    
+    for key, value in update_data.items():
+        setattr(video, key, value)
+    
+    try:
+        db.add(video)
+        db.commit()
+        db.refresh(video)
+        
+        return video
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                f"Error updating video: {str(e)}"
             )
         )
