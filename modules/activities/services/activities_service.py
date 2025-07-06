@@ -229,11 +229,11 @@ def delete_video(activity_id: int, video_id: int, db: Session):
     file_key = video.file_key
     
     try:
-        db.delete(video)
-        db.commit()
-        
         from utils.s3_client import delete_file_from_s3
         delete_file_from_s3(file_key)
+        
+        db.delete(video)
+        db.commit()
         
         return {"detail": f"Video {video_id} deleted successfully from activity {activity_id}"}
         
