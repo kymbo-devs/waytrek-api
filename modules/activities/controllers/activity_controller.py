@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
-from modules.activities.schemas.activity_schema import ActivityCreate, ActivityFilter, ActivityUpdate, ActivityVideosFilters, ActivityVideosResponse
+from modules.activities.schemas.activity_schema import ActivityCreate, ActivityFilter, ActivityUpdate, ActivityVideosFilters, ActivityVideosResponse, VideoUpdate
 from modules.activities.services import activities_service
 
 
@@ -35,3 +35,11 @@ def create_video_controller(activity_id: int, video: UploadFile, title: str, des
 
 def get_video_signed_url_controller(activity_id: int, video_id: int, db: Session):
     return activities_service.get_video_signed_url(activity_id=activity_id, video_id=video_id, db=db)
+
+
+def delete_video_controller(activity_id: int, video_id: int, db: Session):
+    return activities_service.delete_video(activity_id=activity_id, video_id=video_id, db=db)
+
+
+def update_video_controller(activity_id: int, video_id: int, video_data: VideoUpdate, db: Session):
+    return activities_service.update_video(activity_id=activity_id, video_id=video_id, video_data=video_data, db=db)

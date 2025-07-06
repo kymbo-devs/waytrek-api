@@ -4,7 +4,7 @@ from typing import List
 from fastapi import UploadFile, File, Form
 
 from modules.activities.controllers import activity_controller
-from modules.activities.schemas.activity_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, ActivityVideosResponse, VideoSignedUrlResponse
+from modules.activities.schemas.activity_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, ActivityVideosResponse, VideoSignedUrlResponse, Video, VideoUpdate
 from modules.activities.controllers.activity_controller import (
     create_activity_controller,
     get_activities_controller,
@@ -12,7 +12,9 @@ from modules.activities.controllers.activity_controller import (
     update_activity_controller,
     delete_activity_controller,
     create_video_controller,
-    get_video_signed_url_controller
+    get_video_signed_url_controller,
+    delete_video_controller,
+    update_video_controller
 )
 from db.session import get_db
 from utils.error_models import (
@@ -22,7 +24,8 @@ from utils.error_models import (
     LocationNotFoundErrorResponse,
     VideoNotFoundErrorResponse,
     VideoUploadErrorResponse,
-    ServerErrorResponse
+    ServerErrorResponse,
+    ValidationErrorResponse
 )
 
 router = APIRouter()
@@ -171,4 +174,51 @@ def get_activity_videos(activity_id: int, db=Depends(get_db)) -> List[ActivityVi
 )
 async def get_video_signed_url_route(activity_id: int, video_id: int, db: Session = Depends(get_db)):
     return get_video_signed_url_controller(activity_id, video_id, db)
+
+@router.delete(
+    "/{activity_id}/videos/{video_id}",
+    status_code=204,
+    responses={
+        404: {"model": VideoNotFoundErrorResponse, "description": "Video not found"},
+        500: {"model": ServerErrorResponse, "description": "Video deletion failed"}
+    },
+    summary="Delete a video from an activity",
+    description="""
+    Deletes a video from both the database and S3 storage.
+    
+    - Validates that the video belongs to the specified activity
+    - Removes the video file from S3 storage
+    - Removes the video record from the database
+    - Operation is atomic - if S3 deletion fails, database changes are rolled back
+    """,
+)
+async def delete_video_route(activity_id: int, video_id: int, db: Session = Depends(get_db)):
+    delete_video_controller(activity_id, video_id, db)
+    return
+
+@router.patch(
+    "/{activity_id}/videos/{video_id}",
+    response_model=Video,
+    responses={
+        400: {"model": ValidationErrorResponse, "description": "No fields provided for update"},
+        404: {"model": VideoNotFoundErrorResponse, "description": "Video not found"},
+        500: {"model": ServerErrorResponse, "description": "Video update failed"}
+    },
+    summary="Update a video's title or description",
+    description="""
+    Updates the title and/or description of a video in the database.
+    
+    - Only updates title and description fields
+    - Does not affect the video file in S3 storage
+    - At least one field (title or description) must be provided
+    - Validates that the video belongs to the specified activity
+    """,
+)
+async def update_video_route(
+    activity_id: int, 
+    video_id: int, 
+    video_data: VideoUpdate, 
+    db: Session = Depends(get_db)
+):
+    return update_video_controller(activity_id, video_id, video_data, db)
 
