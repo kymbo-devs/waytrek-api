@@ -199,10 +199,10 @@ def get_activities(db: Session, filters: ActivityFilter) -> List[ActivityRespons
         )
     
     if filters.min_price is not None:
-        query = query.filter(Activity.price >= filters.min_price)
+        query = query.filter(Activity.price_min >= filters.min_price)
     
     if filters.max_price is not None:
-        query = query.filter(Activity.price <= filters.max_price)
+        query = query.filter(Activity.price_max <= filters.max_price)
     
     if filters.min_population is not None:
         query = query.filter(Activity.population >= filters.min_population)
