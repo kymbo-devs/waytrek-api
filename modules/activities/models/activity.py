@@ -52,7 +52,7 @@ class ActivityPhotos(Base):
     __tablename__ = "activity_photos"
     
     id = Column(Integer, primary_key=True, nullable=False)
-    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="cascade"))
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="cascade"), nullable=False)
     name = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
 
@@ -62,7 +62,7 @@ class ActivityReviews(Base):
     __tablename__ = "activity_reviews"
     
     id = Column(Integer, primary_key=True, nullable=False)
-    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="cascade"))
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="cascade"), nullable=False)
     content = Column(Text, nullable=False)
 
     activity: Mapped['Activity'] = relationship(back_populates="reviews")
@@ -71,7 +71,7 @@ class ActivityTips(Base):
     __tablename__ = "activity_tips"
     
     id = Column(Integer, primary_key=True, nullable=False)
-    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="cascade"))
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="cascade"), nullable=False)
     tip_type = Column(Text, nullable=False)  # 'foodie', 'weather_clothing', 'pro_traveler'
     tip = Column(Text, nullable=False)
 

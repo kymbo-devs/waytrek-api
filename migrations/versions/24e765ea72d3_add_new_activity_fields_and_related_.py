@@ -42,7 +42,7 @@ def upgrade() -> None:
         -- Create activity_photos table
         CREATE TABLE activity_photos (
             id SERIAL PRIMARY KEY,
-            activity_id INTEGER REFERENCES activities(id) ON DELETE CASCADE,
+            activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             url TEXT NOT NULL
         );
@@ -50,14 +50,14 @@ def upgrade() -> None:
         -- Create activity_reviews table
         CREATE TABLE activity_reviews (
             id SERIAL PRIMARY KEY,
-            activity_id INTEGER REFERENCES activities(id) ON DELETE CASCADE,
+            activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
             content TEXT NOT NULL
         );
 
         -- Create activity_tips table
         CREATE TABLE activity_tips (
             id SERIAL PRIMARY KEY,
-            activity_id INTEGER REFERENCES activities(id) ON DELETE CASCADE,
+            activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
             tip_type TEXT CHECK (tip_type IN ('foodie', 'weather_clothing', 'pro_traveler')) NOT NULL,
             tip TEXT NOT NULL
         );
