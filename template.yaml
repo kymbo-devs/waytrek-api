@@ -1,268 +1,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: 'WayTrek API - Serverless FastAPI application with RDS PostgreSQL'
+Description: WayTrek API - FastAPI Application on ECS with ECR
 
 Parameters:
-  Environment:
-    Type: String
-    Default: production
-    AllowedValues: [development, staging, production]
-    Description: Environment name
-  
-  DomainName:
-    Type: String
-    Default: api.waytrek.app
-    Description: Domain name for the API
-  
-  CertificateArn:
-    Type: String
-    Default: arn:aws:acm:us-east-1:291720501309:certificate/b6c9959b-422d-4927-be32-24f903b525d6
-    Description: ACM Certificate ARN for SSL
-  
-  DBMasterUsername:
-    Type: String
-    Default: postgres
-    Description: Database master username
-  
-  DBMasterPassword:
+  DbPassword:
     Type: String
     NoEcho: true
-    MinLength: 8
-    Description: Database master password
-
-Globals:
-  Function:
-    Timeout: 30
-    MemorySize: 512
-    Environment:
-      Variables:
-        PROJECT_NAME: WayTrek API
-        COGNITO_USER_POOL_ID: !Ref CognitoUserPool
-        COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
-        COGNITO_CLIENT_SECRET: !GetAtt CognitoUserPoolClient.ClientSecret
-        S3_BUCKET_NAME: !Ref FileStorageBucket
-        S3_REGION: !Ref AWS::Region
-        DB_HOSTNAME: !GetAtt Database.Endpoint.Address
-        DB_PORT: !GetAtt Database.Endpoint.Port
-        DB_NAME: postgres
-        DB_USER: !Ref DBMasterUsername
-        DB_PASSWORD: !Ref DBMasterPassword
+    Description: Database password for RDS PostgreSQL instance
 
 Resources:
-  # Cognito User Pool
-  CognitoUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: !Sub 'waytrek-${Environment}-users'
-      UsernameAttributes: 
-        - email
-      AutoVerifiedAttributes: 
-        - email
-      EmailVerificationMessage: 'Please click the link below to verify your email address. {####}'
-      EmailVerificationSubject: 'Verify your WayTrek account'
-      UserPoolAddOns:
-        AdvancedSecurityMode: ENFORCED
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 8
-          RequireUppercase: true
-          RequireLowercase: true
-          RequireNumbers: true
-          RequireSymbols: true
-      Schema:
-        - Name: email
-          AttributeDataType: String
-          Required: true
-          Mutable: true
-        - Name: given_name
-          AttributeDataType: String
-          Required: true
-          Mutable: true
-        - Name: family_name
-          AttributeDataType: String
-          Required: true
-          Mutable: true
-      UserPoolTags:
-        Name: !Sub 'waytrek-${Environment}-user-pool'
-        Environment: !Ref Environment
-
-  # Cognito User Pool Client
-  CognitoUserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-      UserPoolId: !Ref CognitoUserPool
-      ClientName: !Sub 'waytrek-${Environment}-client'
-      GenerateSecret: true
-      ExplicitAuthFlows:
-        - ALLOW_USER_PASSWORD_AUTH
-        - ALLOW_REFRESH_TOKEN_AUTH
-        - ALLOW_USER_SRP_AUTH
-      SupportedIdentityProviders:
-        - COGNITO
-      CallbackURLs:
-        - !Sub 'https://${DomainName}/callback'
-      LogoutURLs:
-        - !Sub 'https://${DomainName}/logout'
-      AllowedOAuthFlows:
-        - code
-        - implicit
-      AllowedOAuthScopes:
-        - email
-        - openid
-        - profile
-      AllowedOAuthFlowsUserPoolClient: true
-      RefreshTokenValidity: 30
-      AccessTokenValidity: 24
-      IdTokenValidity: 24
-      PreventUserExistenceErrors: ENABLED
-
-  # Cognito User Pool Domain
-  CognitoUserPoolDomain:
-    Type: AWS::Cognito::UserPoolDomain
-    Properties:
-      Domain: !Sub 'waytrek-${Environment}-auth'
-      UserPoolId: !Ref CognitoUserPool
-
-  # S3 Bucket for file storage
-  FileStorageBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub 'waytrek-${Environment}-files-${AWS::AccountId}'
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      VersioningConfiguration:
-        Status: Enabled
-      LifecycleConfiguration:
-        Rules:
-          - Id: DeleteOldVersions
-            Status: Enabled
-            NoncurrentVersionExpirationInDays: 30
-          - Id: DeleteIncompleteMultipartUploads
-            Status: Enabled
-            AbortIncompleteMultipartUpload:
-              DaysAfterInitiation: 7
-      CorsConfiguration:
-        CorsRules:
-          - AllowedHeaders:
-              - '*'
-            AllowedMethods:
-              - GET
-              - PUT
-              - POST
-              - DELETE
-              - HEAD
-            AllowedOrigins:
-              - !Sub 'https://${DomainName}'
-            ExposedHeaders:
-              - ETag
-            MaxAge: 3600
-      Tags:
-        - Key: Name
-          Value: !Sub 'waytrek-${Environment}-file-storage'
-        - Key: Environment
-          Value: !Ref Environment
-
-  # S3 Bucket Policy
-  FileStorageBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref FileStorageBucket
-      PolicyDocument:
-        Statement:
-          - Sid: AllowLambdaAccess
-            Effect: Allow
-            Principal:
-              AWS: !GetAtt WayTrekFunctionRole.Arn
-            Action:
-              - s3:GetObject
-              - s3:PutObject
-              - s3:DeleteObject
-            Resource: !Sub '${FileStorageBucket}/*'
-          - Sid: AllowLambdaListBucket
-            Effect: Allow
-            Principal:
-              AWS: !GetAtt WayTrekFunctionRole.Arn
-            Action:
-              - s3:ListBucket
-            Resource: !Ref FileStorageBucket
-
-  # API Gateway
-  WayTrekApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: !Ref Environment
-      Domain:
-        DomainName: !Ref DomainName
-        CertificateArn: !Ref CertificateArn
-        Route53:
-          HostedZoneId: !Ref HostedZone
-      Cors:
-        AllowMethods: "'*'"
-        AllowHeaders: "'*'"
-        AllowOrigin: !Sub "'https://${DomainName}'"
-        AllowCredentials: true
-      BinaryMediaTypes:
-        - '*/*'
-
-  # Lambda Function
-  WayTrekFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      PackageType: Image
-      ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}:latest"
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref WayTrekApi
-            Path: /{proxy+}
-            Method: ANY
-        RootEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref WayTrekApi
-            Path: /
-            Method: ANY
-      Role: !GetAtt WayTrekFunctionRole.Arn
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: .
-      DockerTag: latest
-
-  # ECR Repository
-  ECRRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: !Sub waytrek-api-${Environment}-ecr
-      ImageScanningConfiguration:
-        ScanOnPush: true
-      LifecyclePolicy:
-        LifecyclePolicyText: |
-          {
-            "rules": [
-              {
-                "rulePriority": 1,
-                "description": "Keep last 30 images",
-                "selection": {
-                  "tagStatus": "tagged",
-                  "countType": "imageCountMoreThan",
-                  "countNumber": 30
-                },
-                "action": {
-                  "type": "expire"
-                }
-              }
-            ]
-          }
-
-  # VPC for RDS
+  # VPC Configuration
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -271,30 +18,215 @@ Resources:
       EnableDnsSupport: true
       Tags:
         - Key: Name
-          Value: !Sub waytrek-api-${Environment}-vpc
+          Value: waytrek-api-vpc
 
-  # Private Subnets for RDS
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: waytrek-api-public-subnet-1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: waytrek-api-public-subnet-2
+
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
       AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: 10.0.1.0/24
       Tags:
         - Key: Name
-          Value: !Sub waytrek-api-${Environment}-private-subnet-1
+          Value: waytrek-api-private-subnet-1
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
+      CidrBlock: 10.0.4.0/24
       AvailabilityZone: !Select [1, !GetAZs '']
-      CidrBlock: 10.0.2.0/24
       Tags:
         - Key: Name
-          Value: !Sub waytrek-api-${Environment}-private-subnet-2
+          Value: waytrek-api-private-subnet-2
 
-  # RDS Subnet Group
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: waytrek-api-igw
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: waytrek-api-public-routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: waytrek-api-private-routes-1
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet2
+
+  # ECR Repository
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: waytrek-api
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep last 10 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: waytrek-api
+      CapacityProviders:
+        - FARGATE
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+
+  # Security Groups
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ALB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: waytrek-api-alb-sg
+
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ECS tasks
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: waytrek-api-ecs-sg
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+      Tags:
+        - Key: Name
+          Value: waytrek-api-db-sg
+
+  # Database
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -304,49 +236,109 @@ Resources:
         - !Ref PrivateSubnet2
       Tags:
         - Key: Name
-          Value: !Sub waytrek-api-${Environment}-db-subnet-group
+          Value: waytrek-api-db-subnet-group
 
-  # Security Group for RDS
-  RDSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for RDS database
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          CidrIp: 0.0.0.0/0
-      Tags:
-        - Key: Name
-          Value: !Sub waytrek-api-${Environment}-rds-sg
-
-  # RDS Database
   Database:
     Type: AWS::RDS::DBInstance
     Properties:
-      DBInstanceIdentifier: !Sub waytrek-api-${Environment}-db
+      DBInstanceIdentifier: waytrek-api-db
       DBInstanceClass: db.t3.micro
       Engine: postgres
-      EngineVersion: '15.4'
-      MasterUsername: !Ref DBMasterUsername
-      MasterUserPassword: !Ref DBMasterPassword
+      EngineVersion: '17.4'
+      MasterUsername: postgres
+      MasterUserPassword: !Ref DbPassword
       AllocatedStorage: 20
       StorageType: gp2
       StorageEncrypted: true
       VPCSecurityGroups:
-        - !Ref RDSSecurityGroup
+        - !Ref DBSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
       BackupRetentionPeriod: 7
       MultiAZ: false
       PubliclyAccessible: false
-      DeletionProtection: true
+      DeletionProtection: false
       Tags:
         - Key: Name
-          Value: !Sub waytrek-api-${Environment}-db
+          Value: waytrek-api-database
 
-  # IAM Role for Lambda Function
-  WayTrekFunctionRole:
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: waytrek-api-alb
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: waytrek-api-alb
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: waytrek-api-tg
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: ip
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Tags:
+        - Key: Name
+          Value: waytrek-api-target-group
+
+  # HTTP Listener (redirects to HTTPS)
+  ALBListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  # HTTPS Listener
+  ALBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: arn:aws:acm:us-east-1:291720501309:certificate/b6c9959b-422d-4927-be32-24f903b525d6
+
+  # Custom Domain
+  CustomDomainName:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: waytrek-api-custom-domain
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: waytrek-api-custom-domain
+
+  # IAM Roles
+  ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -354,12 +346,35 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: lambda.amazonaws.com
+              Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
       Policies:
-        - PolicyName: S3Access
+        - PolicyName: ECRAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                Resource: '*'
+
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3AccessPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -368,96 +383,137 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:DeleteObject
-                Resource: !Sub arn:aws:s3:::${FileStorageBucket}/*
-              - Effect: Allow
-                Action:
-                  - s3:ListBucket
-                Resource: !GetAtt FileStorageBucket.Arn
-        - PolicyName: CognitoAccess
+                Resource: '*'
+        - PolicyName: CognitoAccessPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
                   - cognito-idp:*
-                Resource: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}
+                Resource: '*'
 
-  # Route 53 Hosted Zone (optional - remove if you manage DNS elsewhere)
-  HostedZone:
-    Type: AWS::Route53::HostedZone
+  # CloudWatch Log Group
+  CloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      Name: !Ref DomainName
+      LogGroupName: /ecs/waytrek-api
+      RetentionInDays: 7
 
-  HostedZoneId:
-    Type: AWS::SSM::Parameter
+  # ECS Task Definition
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
     Properties:
-      Name: !Sub /waytrek-api/${Environment}/hosted-zone-id
-      Type: String
-      Value: !Ref HostedZone
+      Family: waytrek-api
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: waytrek-api
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}:latest'
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Environment:
+            - Name: DB_USER
+              Value: postgres
+            - Name: DB_PASSWORD
+              Value: !Ref DbPassword
+            - Name: DB_NAME
+              Value: postgres
+            - Name: DB_PORT
+              Value: '5432'
+            - Name: DB_HOSTNAME
+              Value: !GetAtt Database.Endpoint.Address
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: S3_REGION
+              Value: !Ref AWS::Region
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloudWatchLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Essential: true
+
+  # ECS Service
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: ALBListenerHTTPS
+    Properties:
+      ServiceName: waytrek-api
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref ECSTaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+          AssignPublicIp: DISABLED
+      LoadBalancers:
+        - ContainerName: waytrek-api
+          ContainerPort: 8000
+          TargetGroupArn: !Ref TargetGroup
+      HealthCheckGracePeriodSeconds: 300
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      EnableExecuteCommand: true
 
 Outputs:
-  ApiUrl:
-    Description: URL of the API Gateway
-    Value: !Sub https://${WayTrekApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
-    Export:
-      Name: !Sub waytrek-api-${Environment}-api-url
-
-  CustomDomainUrl:
-    Description: Custom domain URL
-    Value: !Sub https://${DomainName}
-    Export:
-      Name: !Sub waytrek-api-${Environment}-domain-url
-
   ECRRepositoryURI:
-    Description: ECR repository URI
-    Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}
+    Description: ECR Repository URI
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}'
     Export:
-      Name: !Sub waytrek-api-${Environment}-ecr-uri
+      Name: !Sub '${AWS::StackName}-ECRRepositoryURI'
+
+  LoadBalancerDNS:
+    Description: Load Balancer DNS Name
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-LoadBalancerDNS'
+
+  CustomDomainTarget:
+    Description: Custom Domain Target (Point api.waytrek.app CNAME to this)
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-CustomDomainTarget'
 
   DatabaseEndpoint:
-    Description: Database endpoint
+    Description: Database Endpoint
     Value: !GetAtt Database.Endpoint.Address
     Export:
-      Name: !Sub waytrek-api-${Environment}-db-endpoint
+      Name: !Sub '${AWS::StackName}-DatabaseEndpoint'
 
-  HostedZoneId:
-    Description: Route 53 Hosted Zone ID
-    Value: !Ref HostedZone
+  ECSClusterName:
+    Description: ECS Cluster Name
+    Value: !Ref ECSCluster
     Export:
-      Name: !Sub waytrek-api-${Environment}-hosted-zone-id
+      Name: !Sub '${AWS::StackName}-ECSClusterName'
 
-  CognitoUserPoolId:
-    Description: Cognito User Pool ID
-    Value: !Ref CognitoUserPool
+  ECSServiceName:
+    Description: ECS Service Name
+    Value: !GetAtt ECSService.Name
     Export:
-      Name: !Sub waytrek-api-${Environment}-cognito-user-pool-id
+      Name: !Sub '${AWS::StackName}-ECSServiceName'
 
-  CognitoUserPoolClientId:
-    Description: Cognito User Pool Client ID
-    Value: !Ref CognitoUserPoolClient
+  ApiUrl:
+    Description: API URL
+    Value: !Sub 'https://${ApplicationLoadBalancer.DNSName}'
     Export:
-      Name: !Sub waytrek-api-${Environment}-cognito-client-id
+      Name: !Sub '${AWS::StackName}-ApiUrl'
 
-  CognitoUserPoolDomain:
-    Description: Cognito User Pool Domain
-    Value: !Sub https://${CognitoUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+  CustomApiUrl:
+    Description: Custom API URL (after DNS setup)
+    Value: 'https://api.waytrek.app'
     Export:
-      Name: !Sub waytrek-api-${Environment}-cognito-domain
-
-  S3BucketName:
-    Description: S3 bucket name for file storage
-    Value: !Ref FileStorageBucket
-    Export:
-      Name: !Sub waytrek-api-${Environment}-s3-bucket-name
-
-  S3BucketArn:
-    Description: S3 bucket ARN for file storage
-    Value: !GetAtt FileStorageBucket.Arn
-    Export:
-      Name: !Sub waytrek-api-${Environment}-s3-bucket-arn
-
-  WayTrekFunctionName:
-    Description: Lambda function name
-    Value: !Ref WayTrekFunction
-    Export:
-      Name: !Sub waytrek-api-${Environment}-lambda-function-name
+      Name: !Sub '${AWS::StackName}-CustomApiUrl'
