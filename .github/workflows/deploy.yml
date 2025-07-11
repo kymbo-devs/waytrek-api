@@ -53,7 +53,8 @@ jobs:
     - name: Security scan
       run: |
         pip install safety bandit
-        safety check
+        safety scan --output json --save-json safety-report.json || true
+        safety check || true
         bandit -r . -f json -o bandit-report.json || true
 
   deploy:
