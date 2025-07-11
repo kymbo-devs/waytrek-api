@@ -42,8 +42,7 @@ jobs:
           --stack-name $STACK_NAME \
           --capabilities CAPABILITY_IAM \
           --region $AWS_REGION \
-          --parameter-overrides \
-            DbPassword=${{ secrets.DB_PASSWORD }} \
+          --parameter-overrides "DbPassword=${{ secrets.DB_PASSWORD }}" \
           --no-confirm-changeset \
           --no-fail-on-empty-changeset
 
