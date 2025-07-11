@@ -1,0 +1,46 @@
+{
+  "httpMethod": "GET",
+  "path": "/",
+  "pathParameters": null,
+  "queryStringParameters": null,
+  "headers": {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Host": "api.waytrek.app",
+    "User-Agent": "SAM-Local-Test"
+  },
+  "multiValueHeaders": {},
+  "body": null,
+  "isBase64Encoded": false,
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "testapi",
+    "domainName": "api.waytrek.app",
+    "domainPrefix": "api",
+    "httpMethod": "GET",
+    "path": "/",
+    "protocol": "HTTP/1.1",
+    "requestId": "test-request-id",
+    "requestTime": "09/Apr/2015:12:34:56 +0000",
+    "requestTimeEpoch": 1428582896000,
+    "resourceId": "123456",
+    "resourcePath": "/",
+    "stage": "production",
+    "identity": {
+      "accessKey": null,
+      "accountId": null,
+      "apiKey": null,
+      "caller": null,
+      "cognitoAuthenticationProvider": null,
+      "cognitoAuthenticationType": null,
+      "cognitoIdentityId": null,
+      "cognitoIdentityPoolId": null,
+      "principalOrgId": null,
+      "sourceIp": "127.0.0.1",
+      "user": null,
+      "userAgent": "SAM-Local-Test",
+      "userArn": null
+    }
+  },
+  "stageVariables": null
+}

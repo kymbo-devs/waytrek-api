@@ -1,0 +1,75 @@
+# SAM Configuration File
+version = 0.1
+
+[default]
+[default.build]
+[default.build.parameters]
+use_container = true
+
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "waytrek-api-production"
+s3_prefix = "waytrek-api"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = [
+    "Environment=production",
+    "DomainName=api.waytrek.app",
+    "CertificateArn=arn:aws:acm:us-east-1:291720501309:certificate/b6c9959b-422d-4927-be32-24f903b525d6",
+    "DBMasterUsername=postgres",
+    "DBMasterPassword=REPLACE_WITH_SECURE_PASSWORD"
+]
+
+[default.local_start_api]
+[default.local_start_api.parameters]
+port = 8000
+host = "0.0.0.0"
+debug = true
+
+[default.local_invoke]
+[default.local_invoke.parameters]
+event = "events/api_event.json"
+
+[development]
+[development.build]
+[development.build.parameters]
+use_container = true
+
+[development.deploy]
+[development.deploy.parameters]
+stack_name = "waytrek-api-development"
+s3_prefix = "waytrek-api-dev"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = [
+    "Environment=development",
+    "DomainName=dev-api.waytrek.app",
+    "CertificateArn=arn:aws:acm:us-east-1:291720501309:certificate/b6c9959b-422d-4927-be32-24f903b525d6",
+    "DBMasterUsername=postgres",
+    "DBMasterPassword=REPLACE_WITH_SECURE_PASSWORD"
+]
+
+[staging]
+[staging.build]
+[staging.build.parameters]
+use_container = true
+
+[staging.deploy]
+[staging.deploy.parameters]
+stack_name = "waytrek-api-staging"
+s3_prefix = "waytrek-api-staging"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = [
+    "Environment=staging",
+    "DomainName=staging-api.waytrek.app",
+    "CertificateArn=arn:aws:acm:us-east-1:291720501309:certificate/b6c9959b-422d-4927-be32-24f903b525d6",
+    "DBMasterUsername=postgres",
+    "DBMasterPassword=REPLACE_WITH_SECURE_PASSWORD"
+]
