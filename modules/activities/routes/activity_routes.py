@@ -4,7 +4,7 @@ from typing import List
 from fastapi import UploadFile, File, Form
 
 from modules.activities.controllers import activity_controller
-from modules.activities.schemas.activity_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, ActivityVideosResponse, VideoSignedUrlResponse, Video, VideoUpdate
+from modules.activities.schemas.activity_schema import Activity, ActivityCreate, ActivityUpdate, ActivityFilter, ActivityVideosResponse, VideoSignedUrlResponse, Video, VideoUpdate, ActivityResponse
 from modules.activities.controllers.activity_controller import (
     create_activity_controller,
     get_activities_controller,
@@ -45,7 +45,7 @@ async def create_activity_route(activity: ActivityCreate, db: Session = Depends(
 
 @router.get(
     "",
-    response_model=List[Activity],
+    response_model=List[ActivityResponse],
     summary="List all activities",
     description="Retrieves a list of activities with optional filtering by location and active status, and supports pagination.",
 )
@@ -57,7 +57,7 @@ async def get_activities_route(
 
 @router.get(
     "/{activity_id}",
-    response_model=Activity,
+    response_model=ActivityResponse,
     responses={
         404: {"model": ActivityNotFoundErrorResponse, "description": "Activity not found"}
     },
