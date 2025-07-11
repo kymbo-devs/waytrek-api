@@ -82,11 +82,6 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build Docker image
-      run: |
-        # Build the Docker image for Lambda
-        docker build -t waytrek-api:latest .
-
     - name: SAM build
       run: |
         sam build --use-container
@@ -98,6 +93,7 @@ jobs:
           --no-fail-on-empty-changeset \
           --stack-name ${{ env.STACK_NAME }} \
           --resolve-s3 \
+          --resolve-image-repos \
           --capabilities CAPABILITY_IAM \
           --region ${{ env.AWS_REGION }} \
           --parameter-overrides \
@@ -123,40 +119,37 @@ jobs:
         echo "ecr-repository=$ECR_REPO" >> $GITHUB_OUTPUT
         echo "api-url=$API_URL" >> $GITHUB_OUTPUT
 
-    - name: Build and push Docker image to ECR
-      env:
-        ECR_REPOSITORY: ${{ steps.stack-outputs.outputs.ecr-repository }}
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        # Build a docker container and push it to ECR
-        docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REPOSITORY:$IMAGE_TAG
-        
-        # Also tag as latest
-        docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REPOSITORY:latest
-        docker push $ECR_REPOSITORY:latest
-
-    - name: Update Lambda function
-      run: |
-        # Update the Lambda function with the new image
-        aws lambda update-function-code \
-          --function-name ${{ env.STACK_NAME }}-WayTrekFunction-* \
-          --image-uri ${{ steps.stack-outputs.outputs.ecr-repository }}:${{ github.sha }} \
-          --region ${{ env.AWS_REGION }} || echo "Lambda function update failed, but continuing..."
-
     - name: Run database migrations
       run: |
         echo "Running database migrations..."
         
-        # Create a temporary Lambda function to run migrations
-        aws lambda invoke \
-          --function-name ${{ env.STACK_NAME }}-WayTrekFunction-* \
-          --payload '{"httpMethod": "POST", "path": "/migrate", "body": "{\"action\": \"migrate\"}"}' \
-          --region ${{ env.AWS_REGION }} \
-          response.json || echo "Migration invoke failed, but continuing..."
+        # Get the Lambda function name from the stack
+        LAMBDA_FUNCTION_NAME=$(aws cloudformation describe-stacks \
+          --stack-name ${{ env.STACK_NAME }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`WayTrekFunctionName`].OutputValue' \
+          --output text 2>/dev/null || echo "")
         
-        echo "Migration response:"
-        cat response.json || echo "No response file found"
+        if [ -z "$LAMBDA_FUNCTION_NAME" ]; then
+          # Fallback: find the function by searching for the stack name
+          LAMBDA_FUNCTION_NAME=$(aws lambda list-functions \
+            --query 'Functions[?starts_with(FunctionName, `${{ env.STACK_NAME }}-WayTrekFunction`)].FunctionName' \
+            --output text | head -1)
+        fi
+        
+        if [ -n "$LAMBDA_FUNCTION_NAME" ]; then
+          echo "Found Lambda function: $LAMBDA_FUNCTION_NAME"
+          # Create a temporary Lambda function to run migrations
+          aws lambda invoke \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --payload '{"httpMethod": "POST", "path": "/migrate", "body": "{\"action\": \"migrate\"}"}' \
+            --region ${{ env.AWS_REGION }} \
+            response.json || echo "Migration invoke failed, but continuing..."
+          
+          echo "Migration response:"
+          cat response.json || echo "No response file found"
+        else
+          echo "Could not find Lambda function for migrations. Skipping migrations."
+        fi
 
     - name: Verify deployment
       run: |

@@ -58,7 +58,7 @@ Resources:
         - email
       AutoVerifiedAttributes: 
         - email
-      EmailVerificationMessage: 'Please click the link below to verify your email address. {##Verify Email##}'
+      EmailVerificationMessage: 'Please click the link below to verify your email address. {####}'
       EmailVerificationSubject: 'Verify your WayTrek account'
       UserPoolAddOns:
         AdvancedSecurityMode: ENFORCED
@@ -202,11 +202,11 @@ Resources:
         DomainName: !Ref DomainName
         CertificateArn: !Ref CertificateArn
         Route53:
-          HostedZoneId: !Ref HostedZoneId
+          HostedZoneId: !Ref HostedZone
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
-        AllowOrigin: "'*'"
+        AllowOrigin: !Sub "'https://${DomainName}'"
         AllowCredentials: true
       BinaryMediaTypes:
         - '*/*'
@@ -216,7 +216,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/waytrek-api-${Environment}-ecr:latest
+      ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}:latest"
       Events:
         ApiEvent:
           Type: Api
@@ -231,6 +231,10 @@ Resources:
             Path: /
             Method: ANY
       Role: !GetAtt WayTrekFunctionRole.Arn
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: latest
 
   # ECR Repository
   ECRRepository:
@@ -364,7 +368,11 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:DeleteObject
-                Resource: !Sub arn:aws:s3:::${S3BucketName}/*
+                Resource: !Sub arn:aws:s3:::${FileStorageBucket}/*
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt FileStorageBucket.Arn
         - PolicyName: CognitoAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -372,7 +380,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - cognito-idp:*
-                Resource: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+                Resource: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}
 
   # Route 53 Hosted Zone (optional - remove if you manage DNS elsewhere)
   HostedZone:
@@ -447,3 +455,9 @@ Outputs:
     Value: !GetAtt FileStorageBucket.Arn
     Export:
       Name: !Sub waytrek-api-${Environment}-s3-bucket-arn
+
+  WayTrekFunctionName:
+    Description: Lambda function name
+    Value: !Ref WayTrekFunction
+    Export:
+      Name: !Sub waytrek-api-${Environment}-lambda-function-name
