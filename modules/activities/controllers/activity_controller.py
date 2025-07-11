@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
-from modules.activities.schemas.activity_schema import ActivityCreate, ActivityFilter, ActivityUpdate, ActivityVideosFilters, ActivityVideosResponse, VideoUpdate
+from modules.activities.schemas.activity_schema import ActivityCreate, ActivityFilter, ActivityUpdate, ActivityVideosFilters, ActivityVideosResponse, VideoUpdate, ActivityResponse
 from modules.activities.services import activities_service
 
 
@@ -13,11 +13,11 @@ def create_activity_controller(activity: ActivityCreate, db: Session):
     return activities_service.create_activity(activity, db)
 
 
-def get_activities_controller(filters: ActivityFilter, db: Session):
+def get_activities_controller(filters: ActivityFilter, db: Session) -> List[ActivityResponse]:
     return activities_service.get_activities(db=db, filters=filters)
 
 
-def get_activity_controller(activity_id: int, db: Session):
+def get_activity_controller(activity_id: int, db: Session) -> ActivityResponse:
     return activities_service.get_activity(activity_id=activity_id, db=db)
 
 
