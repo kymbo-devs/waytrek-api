@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: WayTrek API - FastAPI Application on ECS with ECR
+Description: WayTrek API - Minimal ECS deployment
 
 Parameters:
   DbPassword:
@@ -9,139 +9,6 @@ Parameters:
     Description: Database password for RDS PostgreSQL instance
 
 Resources:
-  # VPC Configuration
-  VPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-      Tags:
-        - Key: Name
-          Value: waytrek-api-vpc
-
-  PublicSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: waytrek-api-public-subnet-1
-
-  PublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.2.0/24
-      AvailabilityZone: !Select [1, !GetAZs '']
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: waytrek-api-public-subnet-2
-
-  PrivateSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.3.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
-      Tags:
-        - Key: Name
-          Value: waytrek-api-private-subnet-1
-
-  PrivateSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.4.0/24
-      AvailabilityZone: !Select [1, !GetAZs '']
-      Tags:
-        - Key: Name
-          Value: waytrek-api-private-subnet-2
-
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: waytrek-api-igw
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-
-  NatGateway1EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGateway1:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway1EIP.AllocationId
-      SubnetId: !Ref PublicSubnet1
-
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: waytrek-api-public-routes
-
-  DefaultPublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PublicSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
-
-  PublicSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
-
-  PrivateRouteTable1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: waytrek-api-private-routes-1
-
-  DefaultPrivateRoute1:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway1
-
-  PrivateSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      SubnetId: !Ref PrivateSubnet1
-
-  PrivateSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      SubnetId: !Ref PrivateSubnet2
-
   # ECR Repository
   ECRRepository:
     Type: AWS::ECR::Repository
@@ -168,6 +35,7 @@ Resources:
             ]
           }
 
+  # Use Default VPC and Subnets
   # ECS Cluster
   ECSCluster:
     Type: AWS::ECS::Cluster
@@ -179,61 +47,28 @@ Resources:
         - CapacityProvider: FARGATE
           Weight: 1
 
-  # Security Groups
-  ALBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for ALB
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-      Tags:
-        - Key: Name
-          Value: waytrek-api-alb-sg
-
+  # Security Group for ECS tasks
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for ECS tasks
-      VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 8000
           ToPort: 8000
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
           Value: waytrek-api-ecs-sg
 
-  DBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for RDS
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
-      Tags:
-        - Key: Name
-          Value: waytrek-api-db-sg
-
-  # Database
+  # Database (using default VPC)
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: Subnet group for RDS database
       SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
+        - subnet-04f9ca619ce819b4d
+        - subnet-0f76ce8aaffa5ee1f
       Tags:
         - Key: Name
           Value: waytrek-api-db-subnet-group
@@ -250,9 +85,9 @@ Resources:
       AllocatedStorage: 20
       StorageType: gp2
       StorageEncrypted: true
+      DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups:
         - !Ref DBSecurityGroup
-      DBSubnetGroupName: !Ref DBSubnetGroup
       BackupRetentionPeriod: 7
       MultiAZ: false
       PubliclyAccessible: false
@@ -261,6 +96,20 @@ Resources:
         - Key: Name
           Value: waytrek-api-database
 
+  # Database Security Group
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+      Tags:
+        - Key: Name
+          Value: waytrek-api-db-sg
+
   # Application Load Balancer
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -268,11 +117,8 @@ Resources:
       Name: waytrek-api-alb
       Scheme: internet-facing
       Type: application
-      Subnets:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
       SecurityGroups:
-        - !Ref ALBSecurityGroup
+        - !Ref ECSSecurityGroup
       Tags:
         - Key: Name
           Value: waytrek-api-alb
@@ -283,7 +129,6 @@ Resources:
       Name: waytrek-api-tg
       Port: 8000
       Protocol: HTTP
-      VpcId: !Ref VPC
       TargetType: ip
       HealthCheckIntervalSeconds: 30
       HealthCheckPath: /
@@ -293,6 +138,19 @@ Resources:
       Tags:
         - Key: Name
           Value: waytrek-api-target-group
+
+  # HTTPS Listener
+  ALBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: arn:aws:acm:us-east-1:291720501309:certificate/b6c9959b-422d-4927-be32-24f903b525d6
 
   # HTTP Listener (redirects to HTTPS)
   ALBListenerHTTP:
@@ -308,35 +166,6 @@ Resources:
       Port: 80
       Protocol: HTTP
 
-  # HTTPS Listener
-  ALBListenerHTTPS:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref TargetGroup
-      LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port: 443
-      Protocol: HTTPS
-      Certificates:
-        - CertificateArn: arn:aws:acm:us-east-1:291720501309:certificate/b6c9959b-422d-4927-be32-24f903b525d6
-
-  # Custom Domain
-  CustomDomainName:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: waytrek-api-custom-domain
-      Scheme: internet-facing
-      Type: application
-      Subnets:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
-      SecurityGroups:
-        - !Ref ALBSecurityGroup
-      Tags:
-        - Key: Name
-          Value: waytrek-api-custom-domain
-
   # IAM Roles
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
@@ -350,18 +179,6 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-      Policies:
-        - PolicyName: ECRAccessPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ecr:GetAuthorizationToken
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:BatchGetImage
-                Resource: '*'
 
   ECSTaskRole:
     Type: AWS::IAM::Role
@@ -374,7 +191,7 @@ Resources:
               Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: S3AccessPolicy
+        - PolicyName: S3AndCognitoAccess
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -383,13 +200,6 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:DeleteObject
-                Resource: '*'
-        - PolicyName: CognitoAccessPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
                   - cognito-idp:*
                 Resource: '*'
 
@@ -431,8 +241,6 @@ Resources:
               Value: !GetAtt Database.Endpoint.Address
             - Name: AWS_DEFAULT_REGION
               Value: !Ref AWS::Region
-            - Name: S3_REGION
-              Value: !Ref AWS::Region
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -455,19 +263,12 @@ Resources:
         AwsvpcConfiguration:
           SecurityGroups:
             - !Ref ECSSecurityGroup
-          Subnets:
-            - !Ref PrivateSubnet1
-            - !Ref PrivateSubnet2
-          AssignPublicIp: DISABLED
+          AssignPublicIp: ENABLED
       LoadBalancers:
         - ContainerName: waytrek-api
           ContainerPort: 8000
           TargetGroupArn: !Ref TargetGroup
       HealthCheckGracePeriodSeconds: 300
-      DeploymentConfiguration:
-        MaximumPercent: 200
-        MinimumHealthyPercent: 100
-      EnableExecuteCommand: true
 
 Outputs:
   ECRRepositoryURI:
@@ -477,34 +278,10 @@ Outputs:
       Name: !Sub '${AWS::StackName}-ECRRepositoryURI'
 
   LoadBalancerDNS:
-    Description: Load Balancer DNS Name
+    Description: Load Balancer DNS Name for CNAME
     Value: !GetAtt ApplicationLoadBalancer.DNSName
     Export:
       Name: !Sub '${AWS::StackName}-LoadBalancerDNS'
-
-  CustomDomainTarget:
-    Description: Custom Domain Target (Point api.waytrek.app CNAME to this)
-    Value: !GetAtt ApplicationLoadBalancer.DNSName
-    Export:
-      Name: !Sub '${AWS::StackName}-CustomDomainTarget'
-
-  DatabaseEndpoint:
-    Description: Database Endpoint
-    Value: !GetAtt Database.Endpoint.Address
-    Export:
-      Name: !Sub '${AWS::StackName}-DatabaseEndpoint'
-
-  ECSClusterName:
-    Description: ECS Cluster Name
-    Value: !Ref ECSCluster
-    Export:
-      Name: !Sub '${AWS::StackName}-ECSClusterName'
-
-  ECSServiceName:
-    Description: ECS Service Name
-    Value: !GetAtt ECSService.Name
-    Export:
-      Name: !Sub '${AWS::StackName}-ECSServiceName'
 
   ApiUrl:
     Description: API URL
@@ -512,8 +289,8 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-ApiUrl'
 
-  CustomApiUrl:
-    Description: Custom API URL (after DNS setup)
-    Value: 'https://api.waytrek.app'
+  DatabaseEndpoint:
+    Description: Database Endpoint
+    Value: !GetAtt Database.Endpoint.Address
     Export:
-      Name: !Sub '${AWS::StackName}-CustomApiUrl'
+      Name: !Sub '${AWS::StackName}-DatabaseEndpoint'

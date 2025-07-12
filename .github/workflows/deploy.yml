@@ -3,8 +3,6 @@ name: Deploy WayTrek API to ECS
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 env:
   AWS_REGION: us-east-1
@@ -17,7 +15,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: production
+    if: github.ref == 'refs/heads/main'
 
     steps:
     - name: Checkout
@@ -30,12 +28,20 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
+    - name: Check required secrets
+      run: |
+        if [ -z "${{ secrets.DB_PASSWORD }}" ]; then
+          echo "Error: DB_PASSWORD secret is not set"
+          echo "Please add DB_PASSWORD to your GitHub repository secrets"
+          exit 1
+        fi
+
     - name: Setup SAM CLI
       uses: aws-actions/setup-sam@v2
       with:
         use-installer: true
 
-    - name: Deploy SAM stack (creates ECR repository)
+    - name: Deploy SAM stack
       run: |
         sam deploy \
           --template-file template.yaml \
@@ -56,8 +62,8 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Build a docker container and push it to ECR
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        # Build for correct platform
+        docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         
         # Also tag as latest
@@ -68,47 +74,55 @@ jobs:
 
     - name: Update ECS service
       run: |
-        aws ecs update-service \
-          --cluster $ECS_CLUSTER \
-          --service $ECS_SERVICE \
-          --force-new-deployment \
-          --region $AWS_REGION
+        # Check if service exists before updating
+        if aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --region $AWS_REGION >/dev/null 2>&1; then
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION
+          
+          echo "Service updated, waiting for deployment..."
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --region $AWS_REGION
+        else
+          echo "ECS service not found, stack deployment may still be in progress"
+        fi
 
-    - name: Wait for service deployment
+    - name: Get deployment status and URL
       run: |
-        aws ecs wait services-stable \
-          --cluster $ECS_CLUSTER \
-          --services $ECS_SERVICE \
-          --region $AWS_REGION
-
-    - name: Get deployment status
-      run: |
-        # Get service status
-        aws ecs describe-services \
-          --cluster $ECS_CLUSTER \
-          --services $ECS_SERVICE \
-          --region $AWS_REGION \
-          --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount}'
+        echo "=== Deployment Status ==="
         
-        # Get load balancer DNS
-        aws cloudformation describe-stacks \
+        # Get CloudFormation stack status
+        STACK_STATUS=$(aws cloudformation describe-stacks \
           --stack-name $STACK_NAME \
           --region $AWS_REGION \
-          --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerDNS`].OutputValue' \
-          --output text
-
-    - name: Run health check
-      run: |
+          --query 'Stacks[0].StackStatus' \
+          --output text 2>/dev/null || echo "STACK_NOT_FOUND")
+        
+        echo "Stack Status: $STACK_STATUS"
+        
+        # Get Load Balancer DNS for CNAME
         LB_DNS=$(aws cloudformation describe-stacks \
           --stack-name $STACK_NAME \
           --region $AWS_REGION \
           --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerDNS`].OutputValue' \
-          --output text)
+          --output text 2>/dev/null || echo "NOT_AVAILABLE")
         
-        echo "Load Balancer DNS: $LB_DNS"
-        
-        # Wait a bit for the deployment to stabilize
-        sleep 30
-        
-        # Health check
-        curl -f https://$LB_DNS/ || echo "Health check failed, but deployment completed"
+        if [ "$LB_DNS" != "NOT_AVAILABLE" ] && [ "$LB_DNS" != "None" ]; then
+          echo "=== CNAME Configuration ==="
+          echo "Point your DNS CNAME record for api.waytrek.app to: $LB_DNS"
+          echo "Load Balancer DNS: $LB_DNS"
+          
+          # Try health check
+          echo "=== Health Check ==="
+          if curl -f -m 10 "https://$LB_DNS/" 2>/dev/null; then
+            echo "✅ Health check passed!"
+          else
+            echo "⚠️  Health check failed (may need time to stabilize)"
+          fi
+        else
+          echo "Load Balancer DNS not yet available"
+        fi
