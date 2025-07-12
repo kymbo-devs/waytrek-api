@@ -58,6 +58,27 @@ Resources:
         - Key: Name
           Value: waytrek-api-vpc
 
+  # Application Load Balancer Security Group
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Application Load Balancer
+      VpcId: !Ref DefaultVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP traffic from internet
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS traffic from internet
+      Tags:
+        - Key: Name
+          Value: waytrek-api-alb-sg
+
   # Security Group for ECS tasks
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -68,7 +89,8 @@ Resources:
         - IpProtocol: tcp
           FromPort: 8000
           ToPort: 8000
-          CidrIp: 0.0.0.0/0
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: Allow traffic from ALB on port 8000
       Tags:
         - Key: Name
           Value: waytrek-api-ecs-sg
@@ -200,7 +222,7 @@ Resources:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
       SecurityGroups:
-        - !Ref ECSSecurityGroup
+        - !Ref ALBSecurityGroup
       Tags:
         - Key: Name
           Value: waytrek-api-alb
